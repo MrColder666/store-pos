@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>订单管理 - Store POS</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="header">
+  <h1>📋 订单管理</h1>
+  <div class="sub">查看历史订单</div>
+</div>
+
+<div class="container" id="orders-list"></div>
+
+<div style="padding:0 16px;max-width:600px;margin:0 auto;">
+  <a href="/api/export/orders.csv" class="btn btn-block" style="text-decoration:none;text-align:center;background:#f1f5f9;margin-bottom:12px;" download>
+    📥 导出全部订单 CSV
+  </a>
+</div>
+
+<!-- Order Detail Modal -->
+<div class="modal-bg" id="detail-bg">
+  <div class="modal">
+    <h2>订单详情</h2>
+    <div id="detail-content"></div>
+    <div class="btn-row">
+      <button class="btn" style="background:#f1f5f9;" onclick="closeDetail()">关闭</button>
+      <button class="btn btn-danger" id="btn-refund" onclick="refundOrder()">退款</button>
+    </div>
+  </div>
+</div>
+
+<nav class="tab-bar">
+  <a href="/"><span class="icon">🧾</span>收银</a>
+  <a href="/products"><span class="icon">📦</span>商品</a>
+  <a href="/orders" class="active"><span class="icon">📋</span>订单</a>
+  <a href="/stats"><span class="icon">📊</span>统计</a>
+</nav>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+let currentPage = 1;
+let detailOrderId = null;
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show';
+  setTimeout(() => t.className = 'toast', 2000);
+}
+
+async function loadOrders(page = 1) {
+  currentPage = page;
+  const res = await fetch(`/api/orders?page=${page}`);
+  const data = await res.json();
+  const el = document.getElementById('orders-list');
+
+  if (data.orders.length === 0) {
+    el.innerHTML = '<div class="card" style="text-align:center;color:var(--text-secondary);padding:30px;">暂无订单</div>';
+    return;
+  }
+
+  let html = '';
+  data.orders.forEach(o => {
+    const status = o.status === 'completed' ? '<span class="badge badge-success">已完成</span>' : '<span class="badge badge-danger">已退款</span>';
+    html += `
+      <div class="card order-card" onclick="showDetail(${o.id})">
+        <div class="head">
+          <span class="oid">#${o.id}</span>
+          ${status}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+          <span class="time">${o.created_at}</span>
+          <span style="font-size:18px;font-weight:700;color:var(--primary);">¥${o.total_amount.toFixed(2)}</span>
+        </div>
+      </div>
+    `;
+  });
+
+  // Pagination
+  if (data.pages > 1) {
+    html += '<div style="display:flex;gap:8px;justify-content:center;margin:16px 0;">';
+    for (let p = 1; p <= data.pages; p++) {
+      html += `<button class="btn btn-sm ${p === currentPage ? 'btn-primary' : ''}" onclick="loadOrders(${p})">${p}</button>`;
+    }
+    html += '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+async function showDetail(oid) {
+  detailOrderId = oid;
+  const res = await fetch(`/api/orders/${oid}`);
+  const data = await res.json();
+  const o = data.order;
+  const items = data.items;
+
+  const statusText = o.status === 'completed' ? '<span class="badge badge-success">已完成</span>' : '<span class="badge badge-danger">已退款</span>';
+
+  let html = `
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:700;font-size:16px;">#${o.id}</span>
+        ${statusText}
+      </div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">${o.created_at}</div>
+    </div>
+    <table>
+      <tr><th>商品</th><th>数量</th><th>单价</th><th>小计</th></tr>
+      ${items.map(i => `
+        <tr>
+          <td>${i.product_name}</td>
+          <td>${i.quantity}</td>
+          <td>¥${i.unit_price.toFixed(2)}</td>
+          <td>¥${i.subtotal.toFixed(2)}</td>
+        </tr>
+      `).join('')}
+    </table>
+    <div style="text-align:right;font-size:18px;font-weight:700;color:var(--primary);margin-top:8px;">
+      合计: ¥${o.total_amount.toFixed(2)} (${o.item_count}件)
+    </div>
+  `;
+  document.getElementById('detail-content').innerHTML = html;
+  document.getElementById('detail-bg').classList.add('active');
+
+  // Show/hide refund button
+  document.getElementById('btn-refund').style.display = o.status === 'completed' ? 'block' : 'none';
+}
+
+function closeDetail() {
+  document.getElementById('detail-bg').classList.remove('active');
+  detailOrderId = null;
+}
+
+async function refundOrder() {
+  if (!detailOrderId) return;
+  if (!confirm('确定退款该订单？商品库存将自动恢复。')) return;
+  const res = await fetch(`/api/orders/${detailOrderId}/refund`, { method: 'POST' });
+  const data = await res.json();
+  if (data.ok) {
+    toast('✅ 已退款');
+    closeDetail();
+    loadOrders(currentPage);
+  } else {
+    toast('❌ ' + (data.error || '退款失败'));
+  }
+}
+
+loadOrders();
+</script>
+</body>
+</html>
