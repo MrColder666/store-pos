@@ -54,6 +54,18 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Confirm Modal -->
+<div class="modal-bg" id="confirm-bg">
+  <div class="modal">
+    <h2>⚠️ 确认删除</h2>
+    <p style="color:var(--text-secondary);margin-bottom:16px;" id="confirm-msg">确定要删除该商品吗？</p>
+    <div class="btn-row">
+      <button class="btn" style="background:#f1f5f9;" id="confirm-cancel">取消</button>
+      <button class="btn btn-danger" id="confirm-ok">删除</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let editingId = null;
 
@@ -61,6 +73,27 @@ function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast show';
   setTimeout(() => t.className = 'toast', 2000);
+}
+
+function confirmDialog(msg) {
+  return new Promise(resolve => {
+    document.getElementById('confirm-msg').textContent = msg;
+    document.getElementById('confirm-bg').classList.add('active');
+    var okBtn = document.getElementById('confirm-ok');
+    var cancelBtn = document.getElementById('confirm-cancel');
+    okBtn.onclick = function() {
+      closeConfirm();
+      resolve(true);
+    };
+    cancelBtn.onclick = function() {
+      closeConfirm();
+      resolve(false);
+    };
+  });
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-bg').classList.remove('active');
 }
 
 async function loadProducts() {
@@ -143,7 +176,8 @@ async function saveProduct() {
 }
 
 async function deleteProduct(id) {
-  if (!confirm('确定删除该商品？')) return;
+  const confirmed = await confirmDialog('确定删除该商品吗？此操作不可撤销。');
+  if (!confirmed) return;
   const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
   const data = await res.json();
   if (data.ok) { toast('✅ 已删除'); loadProducts(); }
