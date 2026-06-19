@@ -71,13 +71,16 @@ def add_product():
     try:
         price = float(data.get('price', 0))
         stock = int(data.get('stock', 0))
+        discount = int(data.get('discount', 0))
+        if discount < 0 or discount > 100:
+            return jsonify({'error': '折扣范围 0-100'}), 400
     except (ValueError, TypeError):
         return jsonify({'error': '价格或库存格式错误'}), 400
     category = data.get('category', '').strip()
     conn = get_db()
     conn.execute(
-        "INSERT INTO products (name, price, category, stock) VALUES (?,?,?,?)",
-        (name, price, category, stock)
+        "INSERT INTO products (name, price, category, stock, discount) VALUES (?,?,?,?,?)",
+        (name, price, category, stock, discount)
     )
     conn.commit()
     conn.close()
@@ -93,13 +96,16 @@ def update_product(pid):
     try:
         price = float(data.get('price', 0))
         stock = int(data.get('stock', 0))
+        discount = int(data.get('discount', 0))
+        if discount < 0 or discount > 100:
+            return jsonify({'error': '折扣范围 0-100'}), 400
     except (ValueError, TypeError):
         return jsonify({'error': '价格或库存格式错误'}), 400
     category = data.get('category', '').strip()
     conn = get_db()
     conn.execute(
-        "UPDATE products SET name=?, price=?, category=?, stock=? WHERE id=?",
-        (name, price, category, stock, pid)
+        "UPDATE products SET name=?, price=?, category=?, stock=?, discount=? WHERE id=?",
+        (name, price, category, stock, discount, pid)
     )
     conn.commit()
     conn.close()
@@ -118,9 +124,10 @@ def delete_product(pid):
 # ─── API: Orders ───────────────────────────────────────────────
 @app.route('/api/orders', methods=['POST'])
 def create_order():
-    """Create an order (checkout). Body: {items: [{product_id, quantity}]}"""
+    """Create an order (checkout). Body: {items: [{product_id, quantity}], note: ''}"""
     data = request.get_json(force=True)
     items = data.get('items', [])
+    note = data.get('note', '').strip()
     if not items:
         return jsonify({'error': '订单为空'}), 400
 
@@ -143,14 +150,21 @@ def create_order():
         if row['stock'] < qty:
             conn.close()
             return jsonify({'error': f'{row["name"]} 库存不足（剩余 {row["stock"]}）'}), 400
-        subtotal = round(row['price'] * qty, 2)
+
+        # Apply discount if any
+        unit_price = row['price']
+        discount = row['discount'] or 0
+        if discount > 0:
+            unit_price = round(unit_price * (100 - discount) / 100, 2)
+
+        subtotal = round(unit_price * qty, 2)
         total += subtotal
         total_qty += qty
         order_items.append({
             'product_id': pid,
             'product_name': row['name'],
             'quantity': qty,
-            'unit_price': row['price'],
+            'unit_price': unit_price,
             'subtotal': subtotal
         })
         # Decrement stock
@@ -165,8 +179,8 @@ def create_order():
 
     total = round(total, 2)
     cur = conn.execute(
-        "INSERT INTO orders (total_amount, item_count) VALUES (?,?)",
-        (total, total_qty)
+        "INSERT INTO orders (total_amount, item_count, note) VALUES (?,?,?)",
+        (total, total_qty, note)
     )
     order_id = cur.lastrowid
 
@@ -243,6 +257,48 @@ def refund_order(oid):
         "UPDATE orders SET status='refunded' WHERE id=?",
         (oid,)
     )
+    conn.commit()
+    conn.close()
+    return jsonify({'ok': True})
+
+
+@app.route('/api/orders/<int:oid>', methods=['PUT'])
+def update_order(oid):
+    """Edit an order: update note."""
+    data = request.get_json(force=True)
+    note = data.get('note', '').strip()
+    conn = get_db()
+    order = conn.execute("SELECT * FROM orders WHERE id=?", (oid,)).fetchone()
+    if not order:
+        conn.close()
+        return jsonify({'error': '订单不存在'}), 404
+    conn.execute("UPDATE orders SET note=? WHERE id=?", (note, oid))
+    conn.commit()
+    conn.close()
+    return jsonify({'ok': True})
+
+
+@app.route('/api/orders/<int:oid>', methods=['DELETE'])
+def delete_order(oid):
+    """Hard delete an order permanently."""
+    conn = get_db()
+    order = conn.execute("SELECT * FROM orders WHERE id=?", (oid,)).fetchone()
+    if not order:
+        conn.close()
+        return jsonify({'error': '订单不存在'}), 404
+    # Restore stock if completed
+    if order['status'] == 'completed':
+        items = conn.execute(
+            "SELECT * FROM order_items WHERE order_id=?", (oid,)
+        ).fetchall()
+        for item in items:
+            if item['product_id']:
+                conn.execute(
+                    "UPDATE products SET stock=stock+? WHERE id=?",
+                    (item['quantity'], item['product_id'])
+                )
+    # Delete order (cascade deletes order_items)
+    conn.execute("DELETE FROM orders WHERE id=?", (oid,))
     conn.commit()
     conn.close()
     return jsonify({'ok': True})
@@ -331,7 +387,7 @@ def stats_weekly():
 
     # All completed orders this week with items
     orders_raw = conn.execute("""
-        SELECT id, total_amount, item_count, created_at
+        SELECT id, total_amount, item_count, note, created_at
         FROM orders
         WHERE date(created_at) BETWEEN ? AND ?
           AND status='completed'
@@ -395,21 +451,21 @@ def seed_demo():
         return jsonify({'ok': True, 'message': '已有数据，跳过'})
 
     demo_products = [
-        ('美式咖啡', 22, '饮品', 100),
-        ('拿铁咖啡', 28, '饮品', 80),
-        ('卡布奇诺', 26, '饮品', 60),
-        ('抹茶拿铁', 32, '饮品', 40),
-        ('芒果冰沙', 35, '饮品', 30),
-        ('提拉米苏', 38, '甜品', 15),
-        ('芝士蛋糕', 35, '甜品', 20),
-        ('巧克力松饼', 18, '甜品', 25),
-        ('牛角包', 15, '面包', 30),
-        ('三明治', 28, '轻食', 20),
+        ('美式咖啡', 22, '饮品', 100, 0),
+        ('拿铁咖啡', 28, '饮品', 80, 0),
+        ('卡布奇诺', 26, '饮品', 60, 0),
+        ('抹茶拿铁', 32, '饮品', 40, 0),
+        ('芒果冰沙', 35, '饮品', 30, 0),
+        ('提拉米苏', 38, '甜品', 15, 0),
+        ('芝士蛋糕', 35, '甜品', 20, 10),
+        ('巧克力松饼', 18, '甜品', 25, 0),
+        ('牛角包', 15, '面包', 30, 0),
+        ('三明治', 28, '轻食', 20, 0),
     ]
-    for name, price, cat, stock in demo_products:
+    for name, price, cat, stock, disc in demo_products:
         conn.execute(
-            "INSERT INTO products (name, price, category, stock) VALUES (?,?,?,?)",
-            (name, price, cat, stock)
+            "INSERT INTO products (name, price, category, stock, discount) VALUES (?,?,?,?,?)",
+            (name, price, cat, stock, disc)
         )
 
     # Create sample orders across this week
@@ -456,9 +512,11 @@ def seed_demo():
                 })
 
             total = round(total, 2)
+            sample_notes = ['少糖', '多冰', '打包', '堂食', '', '', '']
+            note = random.choice(sample_notes)
             cur = conn.execute(
-                "INSERT INTO orders (total_amount, item_count, created_at) VALUES (?,?,?)",
-                (total, total_qty, ts)
+                "INSERT INTO orders (total_amount, item_count, note, created_at) VALUES (?,?,?,?)",
+                (total, total_qty, note, ts)
             )
             oid = cur.lastrowid
             for it in items_data:
@@ -491,11 +549,11 @@ def csv_response(filename, headers, rows):
 @app.route('/api/export/products.csv')
 def export_products_csv():
     conn = get_db()
-    rows = conn.execute("SELECT id, name, price, category, stock, created_at FROM products ORDER BY id").fetchall()
+    rows = conn.execute("SELECT id, name, price, category, stock, discount, created_at FROM products ORDER BY id").fetchall()
     conn.close()
     return csv_response('products.csv',
-        ['ID','商品名称','价格','分类','库存','创建时间'],
-        [[r['id'],r['name'],r['price'],r['category'],r['stock'],r['created_at']] for r in rows])
+        ['ID','商品名称','价格','分类','库存','折扣%','创建时间'],
+        [[r['id'],r['name'],r['price'],r['category'],r['stock'],r['discount'],r['created_at']] for r in rows])
 
 
 @app.route('/api/export/orders.csv')

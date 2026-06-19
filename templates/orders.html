@@ -9,7 +9,7 @@
 <body>
 <div class="header">
   <h1>📋 订单管理</h1>
-  <div class="sub">查看历史订单</div>
+  <div class="sub">查看、编辑、删除历史订单</div>
 </div>
 
 <div class="container" id="orders-list"></div>
@@ -25,9 +25,32 @@
   <div class="modal">
     <h2>订单详情</h2>
     <div id="detail-content"></div>
-    <div class="btn-row">
+
+    <!-- Edit Note -->
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">备注</label>
+      <div style="display:flex;gap:6px;">
+        <input class="form-input" id="edit-note" placeholder="无备注" style="flex:1;font-size:13px;">
+        <button class="btn btn-sm" style="background:var(--primary);color:#fff;" onclick="saveNote()">保存</button>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:12px;">
       <button class="btn" style="background:#f1f5f9;" onclick="closeDetail()">关闭</button>
       <button class="btn btn-danger" id="btn-refund" onclick="refundOrder()">退款</button>
+      <button class="btn btn-danger" style="background:#dc2626;" id="btn-delete" onclick="deleteOrder()">🗑 删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-bg" id="confirm-bg">
+  <div class="modal">
+    <h2>⚠️ 确认</h2>
+    <p style="color:var(--text-secondary);margin-bottom:16px;" id="confirm-msg">确定吗？</p>
+    <div class="btn-row">
+      <button class="btn" style="background:#f1f5f9;" id="confirm-cancel">取消</button>
+      <button class="btn btn-danger" id="confirm-ok">确定</button>
     </div>
   </div>
 </div>
@@ -50,6 +73,25 @@ function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast show';
   setTimeout(() => t.className = 'toast', 2000);
+}
+
+function confirmDialog(msg) {
+  return new Promise(resolve => {
+    document.getElementById('confirm-msg').textContent = msg;
+    document.getElementById('confirm-bg').classList.add('active');
+    document.getElementById('confirm-ok').onclick = function() {
+      closeConfirm();
+      resolve(true);
+    };
+    document.getElementById('confirm-cancel').onclick = function() {
+      closeConfirm();
+      resolve(false);
+    };
+  });
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-bg').classList.remove('active');
 }
 
 async function loadOrders(page = 1) {
@@ -76,6 +118,7 @@ async function loadOrders(page = 1) {
           <span class="time">${o.created_at}</span>
           <span style="font-size:18px;font-weight:700;color:var(--primary);">¥${o.total_amount.toFixed(2)}</span>
         </div>
+        ${o.note ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">📝 ${o.note}</div>` : ''}
       </div>
     `;
   });
@@ -125,10 +168,13 @@ async function showDetail(oid) {
     </div>
   `;
   document.getElementById('detail-content').innerHTML = html;
+  document.getElementById('edit-note').value = o.note || '';
   document.getElementById('detail-bg').classList.add('active');
 
-  // Show/hide refund button
-  document.getElementById('btn-refund').style.display = o.status === 'completed' ? 'block' : 'none';
+  // Show/hide buttons
+  const isCompleted = o.status === 'completed';
+  document.getElementById('btn-refund').style.display = isCompleted ? 'inline-block' : 'none';
+  document.getElementById('btn-delete').style.display = 'inline-block';
 }
 
 function closeDetail() {
@@ -136,9 +182,27 @@ function closeDetail() {
   detailOrderId = null;
 }
 
+async function saveNote() {
+  if (!detailOrderId) return;
+  const note = document.getElementById('edit-note').value.trim();
+  const res = await fetch(`/api/orders/${detailOrderId}`, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ note })
+  });
+  const data = await res.json();
+  if (data.ok) {
+    toast('✅ 备注已保存');
+    loadOrders(currentPage);
+  } else {
+    toast('❌ ' + (data.error || '保存失败'));
+  }
+}
+
 async function refundOrder() {
   if (!detailOrderId) return;
-  if (!confirm('确定退款该订单？商品库存将自动恢复。')) return;
+  const ok = await confirmDialog('确定退款该订单？商品库存将自动恢复。');
+  if (!ok) return;
   const res = await fetch(`/api/orders/${detailOrderId}/refund`, { method: 'POST' });
   const data = await res.json();
   if (data.ok) {
@@ -147,6 +211,21 @@ async function refundOrder() {
     loadOrders(currentPage);
   } else {
     toast('❌ ' + (data.error || '退款失败'));
+  }
+}
+
+async function deleteOrder() {
+  if (!detailOrderId) return;
+  const ok = await confirmDialog('确定永久删除该订单？此操作不可撤销！库存将自动恢复。');
+  if (!ok) return;
+  const res = await fetch(`/api/orders/${detailOrderId}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.ok) {
+    toast('🗑 已删除');
+    closeDetail();
+    loadOrders(currentPage);
+  } else {
+    toast('❌ ' + (data.error || '删除失败'));
   }
 }
 

@@ -23,6 +23,7 @@ def init_db():
             price REAL NOT NULL CHECK(price >= 0),
             category TEXT DEFAULT '',
             stock INTEGER DEFAULT 0 CHECK(stock >= 0),
+            discount INTEGER DEFAULT 0 CHECK(discount >= 0 AND discount <= 100),
             created_at TEXT DEFAULT (datetime('now','localtime'))
         );
 
@@ -30,6 +31,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             total_amount REAL NOT NULL,
             item_count INTEGER NOT NULL,
+            note TEXT DEFAULT '',
             status TEXT DEFAULT 'completed' CHECK(status IN ('completed','refunded')),
             created_at TEXT DEFAULT (datetime('now','localtime'))
         );
@@ -46,5 +48,15 @@ def init_db():
             FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
         );
     """)
+    # Migration: add discount column to products if missing
+    try:
+        conn.execute("ALTER TABLE products ADD COLUMN discount INTEGER DEFAULT 0 CHECK(discount >= 0 AND discount <= 100)")
+    except sqlite3.OperationalError:
+        pass  # column already exists
+    # Migration: add note column to orders if missing
+    try:
+        conn.execute("ALTER TABLE orders ADD COLUMN note TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass  # column already exists
     conn.commit()
     conn.close()
