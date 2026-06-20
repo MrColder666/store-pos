@@ -593,6 +593,79 @@ def export_weekly_csv():
           r['created_at'],r['product_name'],r['quantity'],r['unit_price'],r['subtotal']] for r in rows])
 
 
+# ─── Product Options ───────────────────────────────────────────
+@app.route('/api/products/<int:pid>/options', methods=['GET'])
+def list_product_options(pid):
+    conn = get_db()
+    rows = conn.execute("SELECT id, group_name, option_name, price_adjustment, sort_order FROM product_options WHERE product_id=? ORDER BY group_name, sort_order, id", (pid,)).fetchall()
+    conn.close()
+    groups = {}
+    for r in rows:
+        g = r['group_name']
+        if g not in groups: groups[g] = []
+        groups[g].append({'id': r['id'], 'option_name': r['option_name'], 'price_adjustment': r['price_adjustment'], 'sort_order': r['sort_order']})
+    return jsonify([{'group_name': g, 'options': opts} for g, opts in groups.items()])
+
+
+@app.route('/api/products/<int:pid>/options', methods=['POST'])
+def save_product_options(pid):
+    data = request.get_json(force=True)
+    conn = get_db()
+    conn.execute("DELETE FROM product_options WHERE product_id=?", (pid,))
+    sort = 0
+    for group in data:
+        gname = group.get('group_name', '').strip()
+        if not gname: continue
+        for opt in group.get('options', []):
+            oname = opt.get('option_name', '').strip()
+            if not oname: continue
+            conn.execute("INSERT INTO product_options (product_id, group_name, option_name, price_adjustment, sort_order) VALUES (?,?,?,?,?)",
+                (pid, gname, oname, float(opt.get('price_adjustment', 0)), sort))
+            sort += 1
+    conn.commit()
+    conn.close()
+    return jsonify({'ok': True})
+
+
+# ─── Chart Export ──────────────────────────────────────────────
+@app.route('/api/stats/weekly/chart.png')
+def weekly_chart_png():
+    import matplotlib; matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from io import BytesIO
+    from datetime import date, timedelta
+    today = date.today()
+    monday = today - timedelta(days=today.weekday())
+    conn = get_db()
+    rows = conn.execute("SELECT date(created_at) as d, SUM(total_amount) as rev, COUNT(*) as cnt FROM orders WHERE date(created_at) BETWEEN ? AND ? AND status='completed' GROUP BY d ORDER BY d",
+        (monday.isoformat(), (monday+timedelta(days=6)).isoformat())).fetchall()
+    conn.close()
+    days_cn = ['周一','周二','周三','周四','周五','周六','周日']
+    revs, cnts, labels = [], [], []
+    for i in range(7):
+        d = monday + timedelta(days=i)
+        ds = d.isoformat()
+        found = [r for r in rows if r['d'] == ds]
+        rev = round(found[0]['rev'], 2) if found else 0
+        cnt = found[0]['cnt'] if found else 0
+        revs.append(rev); cnts.append(cnt)
+        labels.append(f'{days_cn[i]}\n{d.month}/{d.day}')
+    fig, ax = plt.subplots(figsize=(10, 5), dpi=120)
+    bars = ax.bar(range(7), revs, color='#38a169', width=0.6, edgecolor='#2f855a', linewidth=1.2)
+    if revs and max(revs) > 0:
+        for bar, rev, cnt in zip(bars, revs, cnts):
+            ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+max(revs)*0.02, f'¥{rev}\n{cnt}单', ha='center', va='bottom', fontsize=9)
+    ax.set_xticks(range(7)); ax.set_xticklabels(labels, fontsize=10)
+    ax.set_ylabel('营收 (¥)', fontsize=11)
+    ax.set_title(f'本周每日营收 ({monday.isoformat()} — {(monday+timedelta(days=6)).isoformat()})', fontsize=13, fontweight='bold')
+    ax.set_ylim(0, max(revs)*1.25 if revs and max(revs)>0 else 100)
+    ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+    ax.grid(axis='y', alpha=0.3); fig.tight_layout()
+    buf = BytesIO(); fig.savefig(buf, format='png'); plt.close(fig)
+    buf.seek(0)
+    return Response(buf.getvalue(), mimetype='image/png', headers={'Content-Disposition': 'inline; filename=weekly_revenue.png'})
+
+
 if __name__ == '__main__':
     init_db()
     app.run(host='127.0.0.1', port=5000, debug=False)

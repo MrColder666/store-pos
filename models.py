@@ -7,7 +7,7 @@ DB_PATH = os.path.join(os.path.dirname(__file__), 'store.db')
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -58,5 +58,17 @@ def init_db():
         conn.execute("ALTER TABLE orders ADD COLUMN note TEXT DEFAULT ''")
     except sqlite3.OperationalError:
         pass  # column already exists
+    # Migration: add product_options table
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS product_options (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            group_name TEXT NOT NULL,
+            option_name TEXT NOT NULL,
+            price_adjustment REAL DEFAULT 0 CHECK(price_adjustment >= 0),
+            sort_order INTEGER DEFAULT 0,
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        );
+    """)
     conn.commit()
     conn.close()

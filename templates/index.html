@@ -51,6 +51,18 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Option Select Modal -->
+<div class="modal-bg" id="opt-select-bg">
+  <div class="modal" style="max-height:80vh;overflow-y:auto;">
+    <h2 id="opt-select-title">选择选项</h2>
+    <div id="opt-select-body"></div>
+    <div class="btn-row" style="margin-top:12px;">
+      <button class="btn" style="background:#f1f5f9;" onclick="closeOptSelect()">取消</button>
+      <button class="btn btn-primary" onclick="confirmOptions()">确认添加</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let cart = [];
 
@@ -69,7 +81,7 @@ async function loadProducts() {
     const hasDiscount = p.discount > 0;
     const finalPrice = hasDiscount ? p.price * (100 - p.discount) / 100 : p.price;
     return `
-    <div class="card" style="cursor:pointer;padding:12px 16px;" onclick="addToCart(${p.id},'${p.name.replace(/'/g,"\\'")}',${finalPrice},${p.discount||0},${p.price})">
+    <div class="card" style="cursor:pointer;padding:12px 16px;" onclick="clickProduct(${p.id},'${p.name.replace(/'/g,"\\'")}',${finalPrice},${p.discount||0},${p.price})">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div>
           <div style="font-weight:600;font-size:15px;">${p.name}</div>
@@ -85,15 +97,72 @@ async function loadProducts() {
   `}).join('');
 }
 
-function addToCart(id, name, finalPrice, discount, origPrice) {
-  const existing = cart.find(c => c.id === id);
+function addToCart(id, name, price, optStr) {
+  const existing = cart.find(c => c.id === id && c.optStr === optStr);
   if (existing) {
     existing.qty += 1;
   } else {
-    cart.push({ id, name, price: finalPrice, qty: 1 });
+    cart.push({ id, name, price, qty: 1, optStr: optStr || '' });
   }
   renderCart();
   toast(`已添加 ${name}`);
+}
+
+// ── Option Selection ──────────────────────────────────────────
+let pendingProduct = null;
+let selectedOptions = {};
+
+function clickProduct(id, name, finalPrice, discount, origPrice) {
+  fetch(`/api/products/${id}/options`).then(r => r.json()).then(opts => {
+    if (opts.length === 0) { addToCart(id, name, finalPrice, ''); return; }
+    pendingProduct = { id, name, price: finalPrice };
+    document.getElementById('opt-select-title').textContent = `⚙️ ${name} — 选择选项`;
+    selectedOptions = {};
+    const body = document.getElementById('opt-select-body');
+    body.innerHTML = '';
+    opts.forEach(g => {
+      let html = `<div style="margin-bottom:12px;"><div style="font-weight:600;font-size:14px;margin-bottom:6px;">${g.group_name}</div>`;
+      g.options.forEach((o, oi) => {
+        const adj = o.price_adjustment > 0 ? `+¥${o.price_adjustment.toFixed(2)}` : '';
+        html += `<div class="opt-item" data-group="${g.group_name}" data-option="${o.option_name}" data-price="${o.price_adjustment}" onclick="selectOpt(this)" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:4px;cursor:pointer;">`;
+        html += `<span style="flex:1;">${o.option_name}</span>${adj ? `<span style="color:var(--primary);font-size:13px;">${adj}</span>` : ''}</div>`;
+      });
+      html += '</div>';
+      body.innerHTML += html;
+    });
+    document.getElementById('opt-select-bg').classList.add('active');
+  });
+}
+
+function selectOpt(el) {
+  const group = el.getAttribute('data-group');
+  const option = el.getAttribute('data-option');
+  const priceAdj = parseFloat(el.getAttribute('data-price')) || 0;
+  selectedOptions[group] = { option, priceAdj };
+  // Highlight selected
+  el.parentElement.querySelectorAll('.opt-item').forEach(item => item.style.background = '#fff');
+  el.style.background = '#eef2ff';
+}
+
+function closeOptSelect() {
+  document.getElementById('opt-select-bg').classList.remove('active');
+  pendingProduct = null;
+}
+
+function confirmOptions() {
+  const groups = document.getElementById('opt-select-body').children;
+  for (const g of groups) {
+    const gname = g.querySelector('div:first-child').textContent;
+    if (!selectedOptions[gname]) { toast(`❌ 请选择「${gname}」`); return; }
+  }
+  let extra = 0;
+  const strs = [];
+  for (const k in selectedOptions) {
+    extra += selectedOptions[k].priceAdj;
+    strs.push(selectedOptions[k].option);
+  }
+  addToCart(pendingProduct.id, pendingProduct.name, pendingProduct.price + extra, strs.join(' / '));
+  closeOptSelect();
 }
 
 function renderCart() {
@@ -116,6 +185,7 @@ function renderCart() {
       <div class="cart-item">
         <div>
           <div style="font-weight:600;">${c.name}</div>
+          ${c.optStr ? `<div style="font-size:11px;color:#6366f1;">📋 ${c.optStr}</div>` : ''}
           <div style="font-size:12px;color:var(--text-secondary);">¥${c.price.toFixed(2)}</div>
         </div>
         <div class="cart-qty">
@@ -151,7 +221,7 @@ async function checkout() {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        items: cart.map(c => ({ product_id: c.id, quantity: c.qty })),
+        items: cart.map(c => ({ product_id: c.id, quantity: c.qty, options_str: c.optStr || '' })),
         note: document.getElementById('order-note').value.trim()
       })
     });

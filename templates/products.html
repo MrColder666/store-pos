@@ -70,8 +70,24 @@
   </div>
 </div>
 
+<!-- Options Modal -->
+<div class="modal-bg" id="opt-bg">
+  <div class="modal" style="max-height:80vh;overflow-y:auto;">
+    <h2 id="opt-title">选项配置</h2>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">添加选项组（如尺寸、甜度），顾客下单时需选择</p>
+    <div id="opt-groups"></div>
+    <button class="btn btn-sm" style="background:#f1f5f9;width:100%;margin-bottom:12px;" onclick="addOptionGroup()">＋ 添加选项组</button>
+    <div class="btn-row">
+      <button class="btn" style="background:#f1f5f9;" onclick="closeOptModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveOptions()">保存选项</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let editingId = null;
+let optProductId = null;
+let optData = []; // options editing data store
 
 function toast(msg) {
   const t = document.getElementById('toast');
@@ -124,6 +140,7 @@ async function loadProducts() {
           </div>
           <div style="margin-top:6px;display:flex;gap:6px;justify-content:end;">
             <button class="btn btn-sm" style="background:#f1f5f9;" onclick="editProduct(${p.id})">编辑</button>
+            <button class="btn btn-sm" style="background:#eef2ff;color:#6366f1;" onclick="manageOptions(${p.id}, '${p.name.replace(/'/g,"\\'")}')">选项</button>
             <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})">删除</button>
           </div>
         </div>
@@ -196,6 +213,72 @@ async function deleteProduct(id) {
   const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
   const data = await res.json();
   if (data.ok) { toast('✅ 已删除'); loadProducts(); }
+}
+
+// ── Options Management ─────────────────────────────────────────
+  optProductId = pid;
+  document.getElementById('opt-title').textContent = `⚙️ ${name} — 选项配置`;
+  fetch(`/api/products/${pid}/options`)
+    .then(r => r.json())
+    .then(groups => {
+      optData = groups;
+      renderOptionGroups(optData);
+      document.getElementById('opt-bg').classList.add('active');
+    });
+}
+
+function addOptionGroup() {
+  optData.push({ group_name: '', options: [{ option_name: '', price_adjustment: 0 }] });
+  renderOptionGroups(optData);
+}
+
+function removeOptionGroup(gi) {
+  optData.splice(gi, 1);
+  renderOptionGroups(optData);
+}
+
+function addOption(gi) {
+  optData[gi].options.push({ option_name: '', price_adjustment: 0 });
+  renderOptionGroups(optData);
+}
+
+function removeOption(gi, oi) {
+  optData[gi].options.splice(oi, 1);
+  renderOptionGroups(optData);
+}
+
+function updateGroupName(gi, val) {
+  optData[gi].group_name = val;
+}
+
+function updateOptionName(gi, oi, val) {
+  optData[gi].options[oi].option_name = val;
+}
+
+function updatePriceAdj(gi, oi, val) {
+  optData[gi].options[oi].price_adjustment = parseFloat(val) || 0;
+}
+
+async function saveOptions() {
+  // Validate
+  for (const g of optData) {
+    if (!g.group_name.trim()) { toast('❌ 选项组名称不能为空'); return; }
+    for (const o of g.options) {
+      if (!o.option_name.trim()) { toast('❌ 选项名称不能为空'); return; }
+    }
+  }
+  const res = await fetch(`/api/products/${optProductId}/options`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(optData)
+  });
+  const data = await res.json();
+  if (data.ok) {
+    toast('✅ 选项已保存');
+    closeOptModal();
+  } else {
+    toast('❌ 保存失败');
+  }
 }
 
 loadProducts();
