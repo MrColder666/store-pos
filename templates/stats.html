@@ -19,6 +19,31 @@
     <div class="stat-card"><div class="num" id="stat-items">-</div><div class="label">售出件数</div></div>
   </div>
 
+  <!-- Payment Method Breakdown -->
+  <div class="card">
+    <h3>💳 支付方式</h3>
+    <div id="pay-breakdown" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
+      <div style="flex:1;min-width:80px;text-align:center;padding:10px;background:#f0fdf4;border-radius:8px;">
+        <div style="font-size:10px;color:var(--text-secondary);">💰 纸币</div>
+        <div style="font-size:18px;font-weight:700;color:#059669;" id="pay-cash">¥0</div>
+      </div>
+      <div style="flex:1;min-width:80px;text-align:center;padding:10px;background:#f0fdf4;border-radius:8px;">
+        <div style="font-size:10px;color:var(--text-secondary);">💚 微信</div>
+        <div style="font-size:18px;font-weight:700;color:#059669;" id="pay-wechat">¥0</div>
+      </div>
+      <div style="flex:1;min-width:80px;text-align:center;padding:10px;background:#f0fdf4;border-radius:8px;">
+        <div style="font-size:10px;color:var(--text-secondary);">💙 支付宝</div>
+        <div style="font-size:18px;font-weight:700;color:#059669;" id="pay-alipay">¥0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending Orders -->
+  <div class="card" id="pending-card" style="display:none;">
+    <h3>⏳ 待支付订单</h3>
+    <div id="pending-orders"></div>
+  </div>
+
   <div class="card">
     <h3>🏆 今日热销</h3>
     <div id="top-products"><div style="color:var(--text-secondary);font-size:14px;">暂无数据</div></div>
@@ -59,6 +84,28 @@ async function loadStats() {
   document.getElementById('stat-revenue').textContent = '¥' + d.revenue.toFixed(2);
   document.getElementById('stat-items').textContent = d.items_sold;
 
+  // Payment breakdown
+  const payMap = { cash: 0, wechat: 0, alipay: 0 };
+  d.payment_breakdown.forEach(p => { payMap[p.method] = p.total; });
+  document.getElementById('pay-cash').textContent = '¥' + (payMap.cash || 0).toFixed(2);
+  document.getElementById('pay-wechat').textContent = '¥' + (payMap.wechat || 0).toFixed(2);
+  document.getElementById('pay-alipay').textContent = '¥' + (payMap.alipay || 0).toFixed(2);
+
+  // Pending orders
+  const pendingEl = document.getElementById('pending-orders');
+  const pendingCard = document.getElementById('pending-card');
+  if (d.pending_orders && d.pending_orders.length > 0) {
+    pendingCard.style.display = 'block';
+    pendingEl.innerHTML = d.pending_orders.map(o =>
+      `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:14px;">
+        <a href="/orders" style="text-decoration:none;color:var(--primary);font-weight:600;">#${o.id}</a>
+        <span style="font-weight:600;">¥${o.total_amount.toFixed(2)}</span>
+      </div>`
+    ).join('');
+  } else {
+    pendingCard.style.display = 'none';
+  }
+
   // Top products
   const topEl = document.getElementById('top-products');
   if (d.top_products.length === 0) {
@@ -77,12 +124,17 @@ async function loadStats() {
   if (d.recent_orders.length === 0) {
     recentEl.innerHTML = '<div style="color:var(--text-secondary);font-size:14px;">暂无订单</div>';
   } else {
-    recentEl.innerHTML = d.recent_orders.map(o => `
+    recentEl.innerHTML = d.recent_orders.map(o => {
+      const payTag = o.payment_method ? `${o.status === 'pending' ? '⏳' : '✅'} ${o.payment_method}` : (o.status === 'pending' ? '⏳ 待支付' : '✅');
+      return `
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:14px;">
-        <span style="color:var(--text-secondary);">#${o.id} · ${o.created_at.slice(11,16)}</span>
+        <span>
+          <span style="color:var(--text-secondary);">#${o.id} · ${(o.created_at||'').slice(11,16)}</span>
+          <span style="font-size:11px;color:#666;margin-left:4px;">${payTag}</span>
+        </span>
         <span style="font-weight:600;">${o.item_count}件 · ¥${o.total_amount.toFixed(2)}</span>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   }
 }
 

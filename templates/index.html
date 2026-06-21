@@ -9,7 +9,7 @@
 <body>
 <div class="header">
   <h1>🧾 收银台</h1>
-  <div class="sub">选择商品 → 结算出单</div>
+  <div class="sub">选择商品 → 选择支付方式 → 收款</div>
 </div>
 
 <div class="container">
@@ -25,8 +25,8 @@
     <div class="form-group" style="margin-bottom:8px;">
       <input class="form-input" id="order-note" placeholder="备注（选填）" style="font-size:13px;padding:8px 10px;">
     </div>
-    <button class="btn btn-success btn-block" id="btn-checkout" disabled onclick="checkout()">
-      ✅ 结算
+    <button class="btn btn-success btn-block" id="btn-checkout" disabled onclick="openPayModal()">
+      💳 去结算
     </button>
   </div>
 
@@ -63,8 +63,89 @@
   </div>
 </div>
 
+<!-- ── Payment Modal ────────────────────────────────────── -->
+<div class="modal-bg" id="pay-modal-bg">
+  <div class="modal pay-modal">
+    <h2>💰 收银结算</h2>
+
+    <!-- Order Summary -->
+    <div id="pay-order-summary" style="margin-bottom:10px;font-size:13px;"></div>
+    <div style="font-size:22px;font-weight:700;text-align:right;color:var(--primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);">
+      应收: ¥<span id="pay-total">0.00</span>
+    </div>
+
+    <!-- Payment Methods -->
+    <div style="margin-bottom:12px;">
+      <div style="font-weight:600;font-size:14px;margin-bottom:8px;">选择支付方式</div>
+      <div style="display:flex;gap:8px;">
+        <div class="pay-method" data-method="cash" onclick="selectPayMethod('cash')">
+          <div class="pm-icon">💰</div>
+          <div class="pm-label">纸币</div>
+        </div>
+        <div class="pay-method" data-method="wechat" onclick="selectPayMethod('wechat')">
+          <div class="pm-icon">💚</div>
+          <div class="pm-label">微信</div>
+        </div>
+        <div class="pay-method" data-method="alipay" onclick="selectPayMethod('alipay')">
+          <div class="pm-icon">💙</div>
+          <div class="pm-label">支付宝</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR Code Area (wechat / alipay) -->
+    <div id="pay-qr-area" style="display:none;text-align:center;margin-bottom:12px;">
+      <img id="pay-qr-img" src="" alt="收款二维码"
+           style="width:180px;height:180px;display:block;margin:0 auto 8px;border:2px solid var(--border);border-radius:8px;object-fit:contain;">
+      <p style="color:var(--text-secondary);font-size:13px;margin:0;">
+        📱 请顾客扫码支付后，点击下方确认收款
+      </p>
+    </div>
+
+    <!-- Cash Area -->
+    <div id="pay-cash-area" style="display:none;margin-bottom:12px;">
+      <div class="form-group">
+        <label style="font-weight:600;">实收金额 (¥)</label>
+        <input type="number" class="form-input" id="pay-cash-input"
+               step="0.01" min="0" placeholder="输入收款金额"
+               oninput="calcChange()" style="font-size:16px;font-weight:700;text-align:center;">
+      </div>
+      <div id="pay-change-display" style="display:none;text-align:center;padding:10px;background:#f0fdf4;border-radius:8px;">
+        <span style="font-size:14px;color:var(--text-secondary);">找零</span>
+        <span style="font-size:28px;font-weight:700;color:var(--danger);display:block;">¥<span id="pay-change-amount">0.00</span></span>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="btn-row" style="margin-top:4px;">
+      <button class="btn" style="background:#f1f5f9;" onclick="closePayModal()">取消</button>
+      <button class="btn btn-success" id="btn-confirm-pay" onclick="confirmPay()" disabled>
+        ✅ 确认收款
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Payment Success Modal ────────────────────────────── -->
+<div class="modal-bg" id="pay-success-bg">
+  <div class="modal" style="text-align:center;max-width:360px;">
+    <div style="font-size:48px;margin:6px 0 4px;">✅</div>
+    <h2 style="margin:0 0 10px;">支付成功</h2>
+    <div id="pay-success-details" style="font-size:14px;color:var(--text-secondary);margin-bottom:12px;"></div>
+
+    <!-- Receipt -->
+    <div class="receipt" id="receipt-content" style="margin-bottom:12px;"></div>
+
+    <button class="btn btn-primary btn-block" onclick="closePaySuccess()" style="margin-top:0;">
+      继续收款
+    </button>
+  </div>
+</div>
+
 <script>
 let cart = [];
+let selectedPayMethod = '';
+let currentPayOrder = null;
 
 function toast(msg) {
   const t = document.getElementById('toast');
@@ -139,7 +220,6 @@ function selectOpt(el) {
   const option = el.getAttribute('data-option');
   const priceAdj = parseFloat(el.getAttribute('data-price')) || 0;
   selectedOptions[group] = { option, priceAdj };
-  // Highlight selected
   el.parentElement.querySelectorAll('.opt-item').forEach(item => item.style.background = '#fff');
   el.style.background = '#eef2ff';
 }
@@ -210,37 +290,226 @@ function changeQty(idx, delta) {
   renderCart();
 }
 
-async function checkout() {
+// ── Payment Flow ──────────────────────────────────────────────
+let cartBackup = [];
+
+async function openPayModal() {
   if (cart.length === 0) return;
-  const btn = document.getElementById('btn-checkout');
+
+  // Save snapshot for receipt
+  cartBackup = cart.map(c => ({...c}));
+
+  // Build order summary
+  let html = '', total = 0;
+  cart.forEach(c => {
+    const sub = c.price * c.qty;
+    total += sub;
+    html += `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px;">
+      <span>${c.name}${c.optStr ? ' <span style="color:#6366f1;">· '+c.optStr+'</span>' : ''} ×${c.qty}</span>
+      <span>¥${sub.toFixed(2)}</span>
+    </div>`;
+  });
+  document.getElementById('pay-order-summary').innerHTML = html;
+  document.getElementById('pay-total').textContent = total.toFixed(2);
+
+  // Reset payment method
+  selectedPayMethod = '';
+  document.querySelectorAll('.pay-method').forEach(el => el.classList.remove('active'));
+  document.getElementById('pay-qr-area').style.display = 'none';
+  document.getElementById('pay-cash-area').style.display = 'none';
+  document.getElementById('pay-cash-input').value = '';
+  document.getElementById('pay-change-display').style.display = 'none';
+  document.getElementById('btn-confirm-pay').disabled = true;
+
+  document.getElementById('pay-modal-bg').classList.add('active');
+}
+
+function closePayModal() {
+  document.getElementById('pay-modal-bg').classList.remove('active');
+  selectedPayMethod = '';
+}
+
+function selectPayMethod(method) {
+  selectedPayMethod = method;
+  document.querySelectorAll('.pay-method').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('data-method') === method);
+  });
+
+  // Hide both areas first
+  document.getElementById('pay-qr-area').style.display = 'none';
+  document.getElementById('pay-cash-area').style.display = 'none';
+  document.getElementById('pay-change-display').style.display = 'none';
+
+  if (method === 'cash') {
+    document.getElementById('pay-cash-area').style.display = 'block';
+    document.getElementById('pay-cash-input').focus();
+    updatePayButton();
+  } else {
+    // wechat / alipay
+    const img = document.getElementById('pay-qr-img');
+    img.src = `/static/qr/${method}.png`;
+    img.onerror = function() {
+      this.style.display = 'none';
+      document.querySelector('#pay-qr-area p').textContent = '⚠️ 请先上传收款码图片到 static/qr/ 目录';
+    };
+    img.onload = function() { this.style.display = 'block'; };
+    document.getElementById('pay-qr-area').style.display = 'block';
+    document.getElementById('btn-confirm-pay').disabled = false;
+  }
+}
+
+function calcChange() {
+  const total = parseFloat(document.getElementById('pay-total').textContent) || 0;
+  const paid = parseFloat(document.getElementById('pay-cash-input').value) || 0;
+  const changeDisplay = document.getElementById('pay-change-display');
+
+  if (paid >= total && paid > 0) {
+    const change = paid - total;
+    document.getElementById('pay-change-amount').textContent = change.toFixed(2);
+    changeDisplay.style.display = 'block';
+  } else {
+    changeDisplay.style.display = 'none';
+  }
+  updatePayButton();
+}
+
+function updatePayButton() {
+  const total = parseFloat(document.getElementById('pay-total').textContent) || 0;
+  const btn = document.getElementById('btn-confirm-pay');
+
+  if (selectedPayMethod === 'cash') {
+    const paid = parseFloat(document.getElementById('pay-cash-input').value) || 0;
+    btn.disabled = paid < total || paid <= 0;
+  } else if (selectedPayMethod === 'wechat' || selectedPayMethod === 'alipay') {
+    btn.disabled = false;
+  } else {
+    btn.disabled = true;
+  }
+}
+
+async function confirmPay() {
+  if (!selectedPayMethod || cart.length === 0) return;
+
+  const btn = document.getElementById('btn-confirm-pay');
   btn.disabled = true;
-  btn.textContent = '⏳ 结算中...';
+  btn.textContent = '⏳ 处理中...';
+
+  const total = parseFloat(document.getElementById('pay-total').textContent) || 0;
+  let paidAmount = total;
+  if (selectedPayMethod === 'cash') {
+    paidAmount = parseFloat(document.getElementById('pay-cash-input').value) || 0;
+    if (paidAmount < total) {
+      toast('❌ 实收金额不足');
+      btn.textContent = '✅ 确认收款';
+      btn.disabled = false;
+      return;
+    }
+  }
 
   try {
-    const res = await fetch('/api/orders', {
+    // Step 1: Create order
+    const note = document.getElementById('order-note').value.trim();
+    const res1 = await fetch('/api/orders', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         items: cart.map(c => ({ product_id: c.id, quantity: c.qty, options_str: c.optStr || '' })),
-        note: document.getElementById('order-note').value.trim()
+        note: note
       })
     });
-    const data = await res.json();
-    if (data.error) {
-      toast('❌ ' + data.error);
-      btn.textContent = '✅ 结算';
+    const data1 = await res1.json();
+    if (data1.error) {
+      toast('❌ ' + data1.error);
+      btn.textContent = '✅ 确认收款';
       btn.disabled = false;
       return;
     }
-    toast(`✅ 结算成功！订单 #${data.order_id}  ¥${data.total.toFixed(2)}`);
+
+    const orderId = data1.order_id;
+
+    // Step 2: Process payment
+    const res2 = await fetch(`/api/orders/${orderId}/pay`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        method: selectedPayMethod,
+        paid_amount: paidAmount
+      })
+    });
+    const data2 = await res2.json();
+
+    if (data2.error) {
+      // Cancel the unpaid order
+      await fetch(`/api/orders/${orderId}/cancel`, { method: 'POST' });
+      toast('❌ ' + data2.error);
+      btn.textContent = '✅ 确认收款';
+      btn.disabled = false;
+      return;
+    }
+
+    // Success!
+    closePayModal();
+    currentPayOrder = { id: orderId, total: data2.total, paid: data2.paid, change: data2.change, method: data2.method };
+    showPaySuccess(orderId, data2);
+
     cart = [];
     renderCart();
     loadProducts();
+    document.getElementById('order-note').value = '';
   } catch (e) {
     toast('❌ 网络错误');
-    btn.textContent = '✅ 结算';
+    btn.textContent = '✅ 确认收款';
     btn.disabled = false;
   }
+}
+
+function showPaySuccess(oid, data) {
+  const methodNames = { cash: '纸币', wechat: '微信', alipay: '支付宝' };
+  const methodIcon = { cash: '💰', wechat: '💚', alipay: '💙' };
+
+  const details = document.getElementById('pay-success-details');
+  details.innerHTML = `
+    <div style="font-size:24px;font-weight:700;color:var(--primary);margin:4px 0;">
+      ¥${data.total.toFixed(2)}
+    </div>
+    <div>${methodIcon[data.method]} ${methodNames[data.method]}</div>
+    <div>订单 #${oid}</div>
+    ${data.change > 0 ? `<div style="color:var(--danger);">找零 ¥${data.change.toFixed(2)}</div>` : ''}
+  `;
+
+  // Receipt
+  const now = new Date();
+  const timeStr = now.getFullYear() + '-' +
+    String(now.getMonth()+1).padStart(2,'0') + '-' +
+    String(now.getDate()).padStart(2,'0') + ' ' +
+    String(now.getHours()).padStart(2,'0') + ':' +
+    String(now.getMinutes()).padStart(2,'0');
+
+  let receiptHtml = `
+    <div style="font-weight:700;font-size:15px;margin-bottom:6px;">🧾 凭条</div>
+    <table style="width:100%;font-size:12px;border-collapse:collapse;">
+  `;
+  cartBackup.forEach(c => {
+    receiptHtml += `<tr><td>${c.name}×${c.qty}</td><td style="text-align:right;">¥${(c.price*c.qty).toFixed(2)}</td></tr>`;
+  });
+  receiptHtml += `
+    <tr><td colspan="2" style="border-top:1px dashed #ccc;padding-top:4px;"></td></tr>
+    <tr><td style="font-weight:600;">合计</td><td style="text-align:right;font-weight:700;">¥${data.total.toFixed(2)}</td></tr>
+    <tr><td style="color:#666;">支付</td><td style="text-align:right;color:#666;">${methodNames[data.method]}</td></tr>
+    ${data.change > 0 ? `<tr><td style="color:#e53e3e;">找零</td><td style="text-align:right;color:#e53e3e;">¥${data.change.toFixed(2)}</td></tr>` : ''}
+    <tr><td colspan="2" style="text-align:center;color:#999;padding-top:6px;font-size:11px;">${timeStr}</td></tr>
+    <tr><td colspan="2" style="text-align:center;color:#999;font-size:11px;">谢谢惠顾！</td></tr>
+  </table>
+  `;
+  document.getElementById('receipt-content').innerHTML = receiptHtml;
+
+  document.getElementById('pay-success-bg').classList.add('active');
+}
+
+function closePaySuccess() {
+  document.getElementById('pay-success-bg').classList.remove('active');
+  currentPayOrder = null;
+  cartBackup = [];
 }
 
 loadProducts();
