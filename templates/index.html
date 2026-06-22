@@ -191,12 +191,12 @@ async function loadProducts() {
   `}).join('');
 }
 
-function addToCart(id, name, price, optStr) {
+function addToCart(id, name, price, optStr, opts) {
   const existing = cart.find(c => c.id === id && c.optStr === optStr);
   if (existing) {
     existing.qty += 1;
   } else {
-    cart.push({ id, name, price, qty: 1, optStr: optStr || '' });
+    cart.push({ id, name, price, qty: 1, optStr: optStr || '', options: opts || [] });
   }
   renderCart();
   toast(`已添加 ${name}`);
@@ -250,11 +250,13 @@ function confirmOptions() {
   }
   let extra = 0;
   const strs = [];
+  const optsData = [];
   for (const k in selectedOptions) {
     extra += selectedOptions[k].priceAdj;
     strs.push(selectedOptions[k].option);
+    optsData.push({ group: k, option: selectedOptions[k].option, priceAdj: selectedOptions[k].priceAdj });
   }
-  addToCart(pendingProduct.id, pendingProduct.name, pendingProduct.price + extra, strs.join(' / '));
+  addToCart(pendingProduct.id, pendingProduct.name, pendingProduct.price + extra, strs.join(' / '), optsData);
   closeOptSelect();
 }
 
@@ -426,7 +428,7 @@ async function confirmPay() {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        items: cart.map(c => ({ product_id: c.id, quantity: c.qty, options_str: c.optStr || '' })),
+        items: cart.map(c => ({ product_id: c.id, quantity: c.qty, options: c.options || [] })),
         note: note
       })
     });

@@ -155,12 +155,28 @@ def create_order():
             else:
                 unit_price = round(unit_price * (100 - discount) / 100, 2)
 
+        # Add option price adjustments
+        chosen_opts = item.get('options', [])
+        option_extra = 0.0
+        opt_parts = []
+        for opt in chosen_opts:
+            adj = float(opt.get('priceAdj', 0))
+            option_extra += adj
+            if opt.get('option'):
+                opt_parts.append(opt['option'])
+        if option_extra > 0:
+            unit_price = round(unit_price + option_extra, 2)
+
+        product_name = row['name']
+        if opt_parts:
+            product_name += f" ({', '.join(opt_parts)})"
+
         subtotal = round(unit_price * qty, 2)
         total += subtotal
         total_qty += qty
         order_items.append({
             'product_id': pid,
-            'product_name': row['name'],
+            'product_name': product_name,
             'quantity': qty,
             'unit_price': unit_price,
             'subtotal': subtotal
