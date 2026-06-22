@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>商品管理 - Store POS</title>
+<title>商品管理 - Store POS v2.1</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <div class="header">
   <h1>📦 商品管理</h1>
-  <div class="sub">管理商品信息与库存</div>
+  <div class="sub">管理商品信息与库存 · v2.1</div>
 </div>
 
 <div class="container">
@@ -45,11 +45,18 @@
       <input class="form-input" id="f-stock" type="number" min="0" placeholder="0">
     </div>
     <div class="form-group">
-      <label>折扣 (0-100%)</label>
-      <input class="form-input" id="f-discount" type="number" min="0" max="100" placeholder="0 = 无折扣">
+      <label>折扣方式</label>
+      <select class="form-input" id="f-discount-type" onchange="updateDiscountInput()">
+        <option value="percent">百分比 (%)</option>
+        <option value="fixed">固定减价 (¥)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label id="f-discount-label">折扣百分比</label>
+      <input class="form-input" id="f-discount" type="number" min="0" step="0.1" placeholder="0 = 无折扣">
     </div>
     <div class="btn-row">
-      <button class="btn" style="background:#f1f5f9;" onclick="closeModal()">取消</button>
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
       <button class="btn btn-primary" id="modal-save" onclick="saveProduct()">保存</button>
     </div>
   </div>
@@ -64,7 +71,7 @@
     <h2>⚠️ 确认删除</h2>
     <p style="color:var(--text-secondary);margin-bottom:16px;" id="confirm-msg">确定要删除该商品吗？</p>
     <div class="btn-row">
-      <button class="btn" style="background:#f1f5f9;" id="confirm-cancel">取消</button>
+      <button class="btn btn-ghost" id="confirm-cancel">取消</button>
       <button class="btn btn-danger" id="confirm-ok">删除</button>
     </div>
   </div>
@@ -76,9 +83,9 @@
     <h2 id="opt-title">选项配置</h2>
     <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">添加选项组（如尺寸、甜度），顾客下单时需选择</p>
     <div id="opt-groups"></div>
-    <button class="btn btn-sm" style="background:#f1f5f9;width:100%;margin-bottom:12px;" onclick="addOptionGroup()">＋ 添加选项组</button>
+    <button class="btn btn-sm btn-ghost" style="width:100%;margin-bottom:12px;" onclick="addOptionGroup()">＋ 添加选项组</button>
     <div class="btn-row">
-      <button class="btn" style="background:#f1f5f9;" onclick="closeOptModal()">取消</button>
+      <button class="btn btn-ghost" onclick="closeOptModal()">取消</button>
       <button class="btn btn-primary" onclick="saveOptions()">保存选项</button>
     </div>
   </div>
@@ -87,7 +94,7 @@
 <script>
 let editingId = null;
 let optProductId = null;
-let optData = []; // options editing data store
+let optData = [];
 
 function toast(msg) {
   const t = document.getElementById('toast');
@@ -101,19 +108,29 @@ function confirmDialog(msg) {
     document.getElementById('confirm-bg').classList.add('active');
     var okBtn = document.getElementById('confirm-ok');
     var cancelBtn = document.getElementById('confirm-cancel');
-    okBtn.onclick = function() {
-      closeConfirm();
-      resolve(true);
-    };
-    cancelBtn.onclick = function() {
-      closeConfirm();
-      resolve(false);
-    };
+    okBtn.onclick = function() { closeConfirm(); resolve(true); };
+    cancelBtn.onclick = function() { closeConfirm(); resolve(false); };
   });
 }
 
-function closeConfirm() {
-  document.getElementById('confirm-bg').classList.remove('active');
+function closeConfirm() { document.getElementById('confirm-bg').classList.remove('active'); }
+
+function updateDiscountInput() {
+  const dt = document.getElementById('f-discount-type').value;
+  const label = document.getElementById('f-discount-label');
+  const input = document.getElementById('f-discount');
+  if (dt === 'percent') {
+    label.textContent = '折扣百分比';
+    input.step = '0.1';
+    input.max = '100';
+    input.placeholder = '0 = 无折扣';
+  } else {
+    label.textContent = '减少金额 (¥)';
+    input.step = '0.01';
+    input.removeAttribute('max');
+    input.placeholder = '0.00';
+  }
+  input.value = '';
 }
 
 async function loadProducts() {
@@ -122,7 +139,20 @@ async function loadProducts() {
   const el = document.getElementById('products-list');
   el.innerHTML = products.map(p => {
     const hasDiscount = p.discount > 0;
-    const finalPrice = hasDiscount ? p.price * (100 - p.discount) / 100 : p.price;
+    const isFixed = p.discount_type === 'fixed';
+    let finalPrice = p.price;
+    if (hasDiscount) {
+      if (isFixed) {
+        finalPrice = Math.max(0, p.price - p.discount);
+      } else {
+        finalPrice = p.price * (100 - p.discount) / 100;
+      }
+    }
+    const discountBadge = hasDiscount
+      ? (isFixed
+        ? `<span class="discount-badge discount-badge-fixed">-¥${parseFloat(p.discount).toFixed(2)}</span>`
+        : `<span class="discount-badge discount-badge-percent">-${parseFloat(p.discount).toFixed(1)}%</span>`)
+      : '';
     return `
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:start;">
@@ -133,13 +163,13 @@ async function loadProducts() {
           </div>
         </div>
         <div style="text-align:right;">
-          <div style="font-size:18px;font-weight:700;color:var(--primary);">
-            ${hasDiscount ? `<span style="text-decoration:line-through;color:#999;font-size:13px;font-weight:400;">¥${p.price.toFixed(2)}</span> ` : ''}
-            ¥${finalPrice.toFixed(2)}
-            ${hasDiscount ? `<span style="font-size:11px;color:#e53e3e;background:#fee;padding:1px 5px;border-radius:4px;">-${p.discount}%</span>` : ''}
+          <div style="font-size:18px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+            ${hasDiscount ? `<span style="text-decoration:line-through;color:var(--text-muted);font-size:13px;font-weight:400;">¥${p.price.toFixed(2)}</span>` : ''}
+            <span>¥${finalPrice.toFixed(2)}</span>
+            ${discountBadge}
           </div>
-          <div style="margin-top:6px;display:flex;gap:6px;justify-content:end;">
-            <button class="btn btn-sm" style="background:#f1f5f9;" onclick="editProduct(${p.id})">编辑</button>
+          <div style="margin-top:8px;display:flex;gap:6px;justify-content:end;">
+            <button class="btn btn-sm btn-ghost" onclick="editProduct(${p.id})">编辑</button>
             <button class="btn btn-sm" style="background:#eef2ff;color:#6366f1;" onclick="manageOptions(${p.id}, '${p.name.replace(/'/g,"\\'")}')">选项</button>
             <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})">删除</button>
           </div>
@@ -157,13 +187,14 @@ function openAdd() {
   document.getElementById('f-category').value = '';
   document.getElementById('f-stock').value = '';
   document.getElementById('f-discount').value = '';
+  document.getElementById('f-discount-type').value = 'percent';
+  updateDiscountInput();
   document.getElementById('modal-bg').classList.add('active');
 }
 
 function editProduct(id) {
   editingId = id;
   document.getElementById('modal-title').textContent = '编辑商品';
-  // Find product data
   fetch('/api/products').then(r => r.json()).then(products => {
     const p = products.find(x => x.id === id);
     if (!p) return;
@@ -171,6 +202,8 @@ function editProduct(id) {
     document.getElementById('f-price').value = p.price;
     document.getElementById('f-category').value = p.category;
     document.getElementById('f-stock').value = p.stock;
+    document.getElementById('f-discount-type').value = p.discount_type || 'percent';
+    updateDiscountInput();
     document.getElementById('f-discount').value = p.discount || 0;
     document.getElementById('modal-bg').classList.add('active');
   });
@@ -185,11 +218,13 @@ async function saveProduct() {
   const price = parseFloat(document.getElementById('f-price').value);
   const category = document.getElementById('f-category').value.trim();
   const stock = parseInt(document.getElementById('f-stock').value) || 0;
-  const discount = parseInt(document.getElementById('f-discount').value) || 0;
+  const discount = parseFloat(document.getElementById('f-discount').value) || 0;
+  const discount_type = document.getElementById('f-discount-type').value;
 
   if (!name) { toast('请输入商品名称'); return; }
   if (isNaN(price) || price < 0) { toast('请输入有效价格'); return; }
-  if (discount < 0 || discount > 100) { toast('折扣范围 0-100'); return; }
+  if (discount < 0) { toast('折扣不能为负数'); return; }
+  if (discount_type === 'percent' && discount > 100) { toast('百分比折扣不能超过 100%'); return; }
 
   const url = editingId ? `/api/products/${editingId}` : '/api/products';
   const method = editingId ? 'PUT' : 'POST';
@@ -197,7 +232,7 @@ async function saveProduct() {
   const res = await fetch(url, {
     method,
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ name, price, category, stock, discount })
+    body: JSON.stringify({ name, price, category, stock, discount, discount_type })
   });
   const data = await res.json();
   if (data.error) { toast('❌ ' + data.error); return; }
@@ -216,9 +251,7 @@ async function deleteProduct(id) {
 }
 
 // ── Options Management ─────────────────────────────────────────
-function closeOptModal() {
-  document.getElementById('opt-bg').classList.remove('active');
-}
+function closeOptModal() { document.getElementById('opt-bg').classList.remove('active'); }
 
 function manageOptions(pid, name) {
   optProductId = pid;
@@ -254,7 +287,7 @@ function renderOptionGroups(groups) {
           </div>
         `).join('')}
       </div>
-      <button class="btn btn-sm" style="background:#f1f5f9;margin-top:4px;font-size:12px;" onclick="addOption(${gi})">＋ 添加选项</button>
+      <button class="btn btn-sm btn-ghost" style="margin-top:4px;font-size:12px;" onclick="addOption(${gi})">＋ 添加选项</button>
     </div>
   `).join('');
 }
@@ -263,36 +296,11 @@ function addOptionGroup() {
   optData.push({ group_name: '', options: [{ option_name: '', price_adjustment: 0 }] });
   renderOptionGroups(optData);
 }
-
-function removeOptionGroup(gi) {
-  optData.splice(gi, 1);
-  renderOptionGroups(optData);
-}
-
-function addOption(gi) {
-  optData[gi].options.push({ option_name: '', price_adjustment: 0 });
-  renderOptionGroups(optData);
-}
-
-function removeOption(gi, oi) {
-  optData[gi].options.splice(oi, 1);
-  renderOptionGroups(optData);
-}
-
-function updateGroupName(gi, val) {
-  optData[gi].group_name = val;
-}
-
-function updateOptionName(gi, oi, val) {
-  optData[gi].options[oi].option_name = val;
-}
-
-function updatePriceAdj(gi, oi, val) {
-  optData[gi].options[oi].price_adjustment = parseFloat(val) || 0;
-}
+function removeOptionGroup(gi) { optData.splice(gi, 1); renderOptionGroups(optData); }
+function addOption(gi) { optData[gi].options.push({ option_name: '', price_adjustment: 0 }); renderOptionGroups(optData); }
+function removeOption(gi, oi) { optData[gi].options.splice(oi, 1); renderOptionGroups(optData); }
 
 async function saveOptions() {
-  // Validate
   for (const g of optData) {
     if (!g.group_name.trim()) { toast('❌ 选项组名称不能为空'); return; }
     for (const o of g.options) {
@@ -305,12 +313,8 @@ async function saveOptions() {
     body: JSON.stringify(optData)
   });
   const data = await res.json();
-  if (data.ok) {
-    toast('✅ 选项已保存');
-    closeOptModal();
-  } else {
-    toast('❌ 保存失败');
-  }
+  if (data.ok) { toast('✅ 选项已保存'); closeOptModal(); }
+  else { toast('❌ 保存失败'); }
 }
 
 loadProducts();

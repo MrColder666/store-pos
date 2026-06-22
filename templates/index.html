@@ -9,7 +9,7 @@
 <body>
 <div class="header">
   <h1>🧾 收银台</h1>
-  <div class="sub">选择商品 → 选择支付方式 → 收款</div>
+  <div class="sub">选择商品 → 选择支付方式 → 收款 · v2.1</div>
 </div>
 
 <div class="container">
@@ -160,7 +160,20 @@ async function loadProducts() {
   const el = document.getElementById('products-list');
   el.innerHTML = products.map(p => {
     const hasDiscount = p.discount > 0;
-    const finalPrice = hasDiscount ? p.price * (100 - p.discount) / 100 : p.price;
+    const isFixed = p.discount_type === 'fixed';
+    let finalPrice = p.price;
+    if (hasDiscount) {
+      if (isFixed) {
+        finalPrice = Math.max(0, p.price - p.discount);
+      } else {
+        finalPrice = p.price * (100 - p.discount) / 100;
+      }
+    }
+    const discountBadge = hasDiscount
+      ? (isFixed
+        ? `<span class="discount-badge discount-badge-fixed">-¥${parseFloat(p.discount).toFixed(2)}</span>`
+        : `<span class="discount-badge discount-badge-percent">-${parseFloat(p.discount).toFixed(1)}%</span>`)
+      : '';
     return `
     <div class="card" style="cursor:pointer;padding:12px 16px;" onclick="clickProduct(${p.id},'${p.name.replace(/'/g,"\\'")}',${finalPrice},${p.discount||0},${p.price})">
       <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -168,10 +181,10 @@ async function loadProducts() {
           <div style="font-weight:600;font-size:15px;">${p.name}</div>
           <div style="font-size:12px;color:var(--text-secondary);">库存: ${p.stock} · ${p.category}</div>
         </div>
-        <div style="font-size:18px;font-weight:700;color:var(--primary);">
-          ${hasDiscount ? `<span style="text-decoration:line-through;color:#999;font-size:12px;font-weight:400;">¥${p.price.toFixed(2)}</span> ` : ''}
-          ¥${finalPrice.toFixed(2)}
-          ${hasDiscount ? `<span style="font-size:10px;color:#e53e3e;background:#fee;padding:1px 4px;border-radius:3px;">-${p.discount}%</span>` : ''}
+        <div style="font-size:18px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:6px;">
+          ${hasDiscount ? `<span style="text-decoration:line-through;color:var(--text-muted);font-size:13px;font-weight:400;">¥${p.price.toFixed(2)}</span>` : ''}
+          <span>¥${finalPrice.toFixed(2)}</span>
+          ${discountBadge}
         </div>
       </div>
     </div>

@@ -16,8 +16,19 @@ def get_db():
 def init_db():
     conn = get_db()
 
-    # Create orders table with v2 schema (CHECK allows all new statuses)
+    # Create products + orders + other tables with v2.1 schema
     conn.executescript("""
+        CREATE TABLE IF NOT EXISTS products (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            price REAL NOT NULL CHECK(price >= 0),
+            category TEXT DEFAULT '',
+            stock INTEGER DEFAULT 0 CHECK(stock >= 0),
+            discount REAL DEFAULT 0 CHECK(discount >= 0),
+            discount_type TEXT DEFAULT 'percent',
+            created_at TEXT DEFAULT (datetime('now','localtime'))
+        );
+
         CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             total_amount REAL NOT NULL,
@@ -29,16 +40,6 @@ def init_db():
             paid_amount REAL DEFAULT 0,
             change_amount REAL DEFAULT 0,
             payment_method TEXT DEFAULT '',
-            created_at TEXT DEFAULT (datetime('now','localtime'))
-        );
-
-        CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            price REAL NOT NULL CHECK(price >= 0),
-            category TEXT DEFAULT '',
-            stock INTEGER DEFAULT 0 CHECK(stock >= 0),
-            discount INTEGER DEFAULT 0 CHECK(discount >= 0 AND discount <= 100),
             created_at TEXT DEFAULT (datetime('now','localtime'))
         );
 
@@ -74,21 +75,53 @@ def init_db():
         );
     """)
 
-    # ── Migration from v1.x (status='completed' → 'paid') ──
+    # ── v2.1 Migration: discount_type + REAL discount ──────────
+    # Check if discount_type column exists
+    cols = [r['name'] for r in conn.execute("PRAGMA table_info(products)").fetchall()]
+    needs_discount_migration = 'discount_type' not in cols
 
-    # Check if we need to migrate: try adding a v2 column; if it succeeds,
-    # then the table had old schema and needs CHECK constraint migration
+    if needs_discount_migration:
+        # Products table needs discount_type column and REAL discount
+        conn.executescript("""
+            PRAGMA foreign_keys=OFF;
+            BEGIN TRANSACTION;
+
+            CREATE TABLE IF NOT EXISTS products_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                price REAL NOT NULL CHECK(price >= 0),
+                category TEXT DEFAULT '',
+                stock INTEGER DEFAULT 0 CHECK(stock >= 0),
+                discount REAL DEFAULT 0 CHECK(discount >= 0),
+                discount_type TEXT DEFAULT 'percent',
+                created_at TEXT DEFAULT (datetime('now','localtime'))
+            );
+
+            INSERT INTO products_new
+                (id, name, price, category, stock, discount, discount_type, created_at)
+            SELECT
+                id, name, price, category, stock, CAST(discount AS REAL), 'percent', created_at
+            FROM products;
+
+            DROP TABLE products;
+            ALTER TABLE products_new RENAME TO products;
+
+            COMMIT;
+            PRAGMA foreign_keys=ON;
+        """)
+    else:
+        # Just make sure the discount column is REAL (SQLite flexible typing)
+        pass
+
+    # ── Migration from v1.x (status='completed' → 'paid') ──
     needs_check_migration = False
     try:
         conn.execute("ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT ''")
-        # Column didn't exist → old schema → needs full migration
         needs_check_migration = True
     except sqlite3.OperationalError:
-        # Column already exists, check if CHECK constraint allows 'pending'
         pass
 
     if not needs_check_migration:
-        # Verify CHECK constraint allows new statuses
         try:
             conn.execute("INSERT INTO orders (id, total_amount, item_count, status) VALUES (-1, 0, 0, 'pending')")
             conn.execute("DELETE FROM orders WHERE id=-1")
@@ -96,7 +129,6 @@ def init_db():
             needs_check_migration = True
 
     if needs_check_migration:
-        # Table exists with old CHECK constraint — recreate it
         conn.executescript("""
             PRAGMA foreign_keys=OFF;
             BEGIN TRANSACTION;

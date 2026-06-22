@@ -63,16 +63,21 @@ def add_product():
     try:
         price = float(data.get('price', 0))
         stock = int(data.get('stock', 0))
-        discount = int(data.get('discount', 0))
-        if discount < 0 or discount > 100:
-            return jsonify({'error': '折扣范围 0-100'}), 400
+        discount = float(data.get('discount', 0))
+        discount_type = data.get('discount_type', 'percent')
+        if discount < 0:
+            return jsonify({'error': '折扣不能为负数'}), 400
+        if discount_type not in ('percent', 'fixed'):
+            return jsonify({'error': '折扣类型无效'}), 400
+        if discount_type == 'percent' and discount > 100:
+            return jsonify({'error': '百分比折扣不能超过 100%'}), 400
     except (ValueError, TypeError):
         return jsonify({'error': '价格或库存格式错误'}), 400
     category = data.get('category', '').strip()
     conn = get_db()
     conn.execute(
-        "INSERT INTO products (name, price, category, stock, discount) VALUES (?,?,?,?,?)",
-        (name, price, category, stock, discount)
+        "INSERT INTO products (name, price, category, stock, discount, discount_type) VALUES (?,?,?,?,?,?)",
+        (name, price, category, stock, discount, discount_type)
     )
     conn.commit(); conn.close()
     return jsonify({'ok': True})
@@ -86,16 +91,21 @@ def update_product(pid):
     try:
         price = float(data.get('price', 0))
         stock = int(data.get('stock', 0))
-        discount = int(data.get('discount', 0))
-        if discount < 0 or discount > 100:
-            return jsonify({'error': '折扣范围 0-100'}), 400
+        discount = float(data.get('discount', 0))
+        discount_type = data.get('discount_type', 'percent')
+        if discount < 0:
+            return jsonify({'error': '折扣不能为负数'}), 400
+        if discount_type not in ('percent', 'fixed'):
+            return jsonify({'error': '折扣类型无效'}), 400
+        if discount_type == 'percent' and discount > 100:
+            return jsonify({'error': '百分比折扣不能超过 100%'}), 400
     except (ValueError, TypeError):
         return jsonify({'error': '价格或库存格式错误'}), 400
     category = data.get('category', '').strip()
     conn = get_db()
     conn.execute(
-        "UPDATE products SET name=?, price=?, category=?, stock=?, discount=? WHERE id=?",
-        (name, price, category, stock, discount, pid)
+        "UPDATE products SET name=?, price=?, category=?, stock=?, discount=?, discount_type=? WHERE id=?",
+        (name, price, category, stock, discount, discount_type, pid)
     )
     conn.commit(); conn.close()
     return jsonify({'ok': True})
@@ -138,8 +148,12 @@ def create_order():
 
         unit_price = row['price']
         discount = row['discount'] or 0
+        discount_type = row['discount_type'] or 'percent'
         if discount > 0:
-            unit_price = round(unit_price * (100 - discount) / 100, 2)
+            if discount_type == 'fixed':
+                unit_price = round(max(0, unit_price - discount), 2)
+            else:
+                unit_price = round(unit_price * (100 - discount) / 100, 2)
 
         subtotal = round(unit_price * qty, 2)
         total += subtotal
@@ -562,7 +576,7 @@ def seed_demo():
     ]
     for name, price, cat, stock, disc in products:
         conn.execute(
-            "INSERT INTO products (name, price, category, stock, discount) VALUES (?,?,?,?,?)",
+            "INSERT INTO products (name, price, category, stock, discount, discount_type) VALUES (?,?,?,?,?,'percent')",
             (name, price, cat, stock, disc)
         )
 
@@ -585,7 +599,7 @@ def seed_demo():
             ts = datetime(day_date.year, day_date.month, day_date.day, hour, minute).strftime('%Y-%m-%d %H:%M:%S')
 
             product_rows = conn.execute(
-                "SELECT id, name, price, discount, stock FROM products ORDER BY RANDOM() LIMIT ?",
+                "SELECT id, name, price, discount, discount_type, stock FROM products ORDER BY RANDOM() LIMIT ?",
                 (random.randint(1, 3),)
             ).fetchall()
 
@@ -595,7 +609,10 @@ def seed_demo():
                 qty = random.randint(1, 2)
                 unit_price = p['price']
                 if p['discount'] > 0:
-                    unit_price = round(unit_price * (100 - p['discount']) / 100, 2)
+                    if p['discount_type'] == 'fixed':
+                        unit_price = round(max(0, unit_price - p['discount']), 2)
+                    else:
+                        unit_price = round(unit_price * (100 - p['discount']) / 100, 2)
                 sub = round(unit_price * qty, 2)
                 total += sub; total_qty += qty
                 items_data.append({
@@ -646,11 +663,11 @@ def csv_response(filename, headers, rows):
 @app.route('/api/export/products.csv')
 def export_products_csv():
     conn = get_db()
-    rows = conn.execute("SELECT id,name,price,category,stock,discount,created_at FROM products ORDER BY id").fetchall()
+    rows = conn.execute("SELECT id,name,price,category,stock,discount,discount_type,created_at FROM products ORDER BY id").fetchall()
     conn.close()
     return csv_response('products.csv',
-        ['ID','商品名称','价格','分类','库存','折扣%','创建时间'],
-        [[r['id'],r['name'],r['price'],r['category'],r['stock'],r['discount'],r['created_at']] for r in rows])
+        ['ID','商品名称','价格','分类','库存','折扣值','折扣类型','创建时间'],
+        [[r['id'],r['name'],r['price'],r['category'],r['stock'],r['discount'],r['discount_type'],r['created_at']] for r in rows])
 
 @app.route('/api/export/orders.csv')
 def export_orders_csv():
