@@ -83,11 +83,11 @@
           <div class="pm-label">纸币</div>
         </div>
         <div class="pay-method" data-method="wechat" onclick="selectPayMethod('wechat')">
-          <div class="pm-icon">💚</div>
+          <div class="pm-icon"><img src="/static/wechat-logo.png" alt="微信" style="width:28px;height:28px;object-fit:contain;"></div>
           <div class="pm-label">微信</div>
         </div>
         <div class="pay-method" data-method="alipay" onclick="selectPayMethod('alipay')">
-          <div class="pm-icon">💙</div>
+          <div class="pm-icon"><img src="/static/alipay-logo.png" alt="支付宝" style="width:28px;height:28px;object-fit:contain;"></div>
           <div class="pm-label">支付宝</div>
         </div>
       </div>
@@ -480,7 +480,7 @@ async function confirmPay() {
 
 function showPaySuccess(oid, data) {
   const methodNames = { cash: '纸币', wechat: '微信', alipay: '支付宝' };
-  const methodIcon = { cash: '💰', wechat: '💚', alipay: '💙' };
+  const methodIcon = { cash: '💰', wechat: '<img src=\"/static/wechat-logo.png\" style=\"width:16px;height:16px;vertical-align:middle;\">', alipay: '<img src=\"/static/alipay-logo.png\" style=\"width:16px;height:16px;vertical-align:middle;\">' };
 
   const details = document.getElementById('pay-success-details');
   details.innerHTML = `

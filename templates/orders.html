@@ -73,8 +73,8 @@
     <div id="pay-now-summary" style="font-size:14px;margin-bottom:10px;"></div>
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <div class="pay-method" data-method="cash" onclick="selectPayNowMethod('cash')"><div class="pm-icon">💰</div><div class="pm-label">纸币</div></div>
-      <div class="pay-method" data-method="wechat" onclick="selectPayNowMethod('wechat')"><div class="pm-icon">💚</div><div class="pm-label">微信</div></div>
-      <div class="pay-method" data-method="alipay" onclick="selectPayNowMethod('alipay')"><div class="pm-icon">💙</div><div class="pm-label">支付宝</div></div>
+      <div class="pay-method" data-method="wechat" onclick="selectPayNowMethod('wechat')"><div class="pm-icon"><img src="/static/wechat-logo.png" style="width:24px;height:24px;object-fit:contain;"></div><div class="pm-label">微信</div></div>
+      <div class="pay-method" data-method="alipay" onclick="selectPayNowMethod('alipay')"><div class="pm-icon"><img src="/static/alipay-logo.png" style="width:24px;height:24px;object-fit:contain;"></div><div class="pm-label">支付宝</div></div>
     </div>
     <div id="pay-now-qr" style="display:none;text-align:center;margin-bottom:8px;">
       <img id="pay-now-qr-img" src="" style="width:150px;height:150px;border:2px solid var(--border);border-radius:8px;">
@@ -115,7 +115,7 @@ const STATUS_BADGES = {
   refunded: '<span class="badge badge-danger">↩️ 已退款</span>',
   cancelled: '<span class="badge" style="background:#e2e8f0;color:#64748b;">❌ 已取消</span>'
 };
-const PAY_ICONS = { cash: '💰', wechat: '💚', alipay: '💙' };
+const PAY_ICON_HTML = { cash: '💰', wechat: '<img src="/static/wechat-logo.png" style="width:16px;height:16px;vertical-align:middle;">', alipay: '<img src="/static/alipay-logo.png" style="width:16px;height:16px;vertical-align:middle;">' };
 const PAY_NAMES = { cash: '纸币', wechat: '微信', alipay: '支付宝' };
 
 function toast(msg) {
@@ -159,7 +159,7 @@ async function loadOrders(page = 1) {
   let html = '';
   data.orders.forEach(o => {
     const payInfo = o.payment_method
-      ? ` · ${PAY_ICONS[o.payment_method]||''} ${PAY_NAMES[o.payment_method]||o.payment_method}`
+      ? ` · ${PAY_ICON_HTML[o.payment_method]||''} ${PAY_NAMES[o.payment_method]||o.payment_method}`
       : '';
     html += `
       <div class="card order-card" onclick="showDetail(${o.id})">
@@ -197,7 +197,7 @@ async function showDetail(oid) {
 
   const statusBadge = STATUS_BADGES[o.status] || '<span class="badge">'+o.status+'</span>';
   const payInfo = o.payment_method
-    ? `<span style="font-size:13px;">${PAY_ICONS[o.payment_method]||''} ${PAY_NAMES[o.payment_method]||o.payment_method}</span>`
+    ? `<span style="font-size:13px;">${PAY_ICON_HTML[o.payment_method]||''} ${PAY_NAMES[o.payment_method]||o.payment_method}</span>`
     : '';
 
   let html = `
@@ -230,7 +230,7 @@ async function showDetail(oid) {
   if (payments.length > 0) {
     html += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:13px;"><div style="font-weight:600;margin-bottom:4px;">💳 支付记录</div>';
     payments.forEach(p => {
-      html += `<div>${PAY_ICONS[p.method]||'💳'} ${PAY_NAMES[p.method]||p.method} · ¥${p.amount.toFixed(2)} · ${p.created_at}</div>`;
+      html += `<div>${PAY_ICON_HTML[p.method]||'💳'} ${PAY_NAMES[p.method]||p.method} · ¥${p.amount.toFixed(2)} · ${p.created_at}</div>`;
     });
     html += '</div>';
   }
