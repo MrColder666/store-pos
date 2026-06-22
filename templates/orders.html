@@ -285,9 +285,10 @@ async function deleteOrder() {
 
 // ── Pay Now (from orders page, for pending orders) ──────────
 function payNow() {
+  const oid = detailOrderId;
   closeDetail();
   setTimeout(() => {
-    payNowOrderId = detailOrderId;
+    payNowOrderId = oid;
     document.getElementById('pay-now-summary').innerHTML = '<div style="color:var(--text-secondary);">加载中...</div>';
     document.getElementById('pay-now-bg').classList.add('active');
     loadPayNowDetail();
@@ -295,7 +296,8 @@ function payNow() {
 }
 
 async function loadPayNowDetail() {
-  const res = await fetch(`/api/orders/${detailOrderId}`);
+  if (!payNowOrderId) return;
+  const res = await fetch(`/api/orders/${payNowOrderId}`);
   const data = await res.json();
   const o = data.order;
   let html = `<div style="font-size:16px;font-weight:700;margin-bottom:6px;">订单 #${o.id}</div>`;
@@ -305,7 +307,6 @@ async function loadPayNowDetail() {
   html += `<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;font-size:18px;font-weight:700;text-align:right;color:var(--primary);">应收: ¥${o.total_amount.toFixed(2)}</div>`;
   document.getElementById('pay-now-summary').innerHTML = html;
   document.getElementById('pay-now-total').value = o.total_amount;
-  payNowOrderId = detailOrderId;
 }
 
 function selectPayNowMethod(method) {
