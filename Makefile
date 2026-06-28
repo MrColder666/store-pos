@@ -35,7 +35,7 @@ clean:
 ## 创建发布包
 archive:
 	@echo "创建发布包..."
-	@cd .. && tar czf store-pos/store-pos-v2.1.0.tar.gz \
+	@cd .. && tar czf store-pos/store-pos-v2.2.0.tar.gz \
 		--exclude='store.db*' \
 		--exclude='__pycache__' \
 		--exclude='.git' \
@@ -43,8 +43,8 @@ archive:
 		--exclude='static/qr/README.txt' \
 		--transform='s|^store-pos|store-pos-v2.1.0|' \
 		store-pos/
-	@echo "✅ 已创建: store-pos-v2.1.0.tar.gz"
-	@ls -lh store-pos-v2.1.0.tar.gz
+	@echo "✅ 已创建: store-pos-v2.2.0.tar.gz"
+	@ls -lh store-pos-v2.2.0.tar.gz
 
 ## 显示帮助
 help:
