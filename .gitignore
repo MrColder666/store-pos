@@ -44,3 +44,7 @@ instance/
 node_modules/
 package.json
 package-lock.json
+
+# 收款二维码（需替换为实际收款码，不提交）
+static/qr/alipay.png
+static/qr/wechat.png
