@@ -79,7 +79,7 @@ def init_db():
     # ── v2.2 Migration: multi_select on product_options ──────
     try:
         conn.execute("ALTER TABLE product_options ADD COLUMN multi_select INTEGER DEFAULT 0")
-    except sqlite3.OperationalError:
+    except (sqlite3.OperationalError, sqlite3.IntegrityError):
         pass  # Column already exists
 
     # ── v2.2 Migration: add 'completed' to orders status ──────
@@ -87,7 +87,7 @@ def init_db():
     try:
         conn.execute("INSERT INTO orders (id, total_amount, item_count, status) VALUES (-2, 0, 0, 'completed')")
         conn.execute("DELETE FROM orders WHERE id=-2")
-    except sqlite3.OperationalError:
+    except (sqlite3.OperationalError, sqlite3.IntegrityError):
         conn.executescript("""
             PRAGMA foreign_keys=OFF;
             BEGIN TRANSACTION;
@@ -154,14 +154,14 @@ def init_db():
     try:
         conn.execute("ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT ''")
         needs_check_migration = True
-    except sqlite3.OperationalError:
+    except (sqlite3.OperationalError, sqlite3.IntegrityError):
         pass
 
     if not needs_check_migration:
         try:
             conn.execute("INSERT INTO orders (id, total_amount, item_count, status) VALUES (-1, 0, 0, 'pending')")
             conn.execute("DELETE FROM orders WHERE id=-1")
-        except sqlite3.OperationalError:
+        except (sqlite3.OperationalError, sqlite3.IntegrityError):
             needs_check_migration = True
 
     if needs_check_migration:
