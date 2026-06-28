@@ -41,3 +41,6 @@ instance/
 # Environment variables
 .env
 .env.*
+node_modules/
+package.json
+package-lock.json

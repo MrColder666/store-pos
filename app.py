@@ -292,7 +292,7 @@ def list_orders():
     offset = (page - 1) * per_page
     conn = get_db()
 
-    if status_filter and status_filter in ('pending', 'paid', 'refunded', 'cancelled'):
+    if status_filter and status_filter in ('pending', 'paid', 'completed', 'refunded', 'cancelled'):
         rows = conn.execute(
             "SELECT * FROM orders WHERE status=? ORDER BY id DESC LIMIT ? OFFSET ?",
             (status_filter, per_page, offset)
@@ -359,6 +359,26 @@ def refund_order(oid):
 
     conn.execute(
         "UPDATE orders SET status='refunded', payment_status='refunded' WHERE id=?",
+        (oid,)
+    )
+    conn.commit(); conn.close()
+    return jsonify({'ok': True})
+
+
+@app.route('/api/orders/<int:oid>/complete', methods=['POST'])
+def complete_order(oid):
+    """Mark a paid order as completed (goods delivered)."""
+    conn = get_db()
+    order = conn.execute(
+        "SELECT * FROM orders WHERE id=? AND status='paid'",
+        (oid,)
+    ).fetchone()
+    if not order:
+        conn.close()
+        return jsonify({'error': '订单不存在或不是已支付状态'}), 400
+
+    conn.execute(
+        "UPDATE orders SET status='completed' WHERE id=?",
         (oid,)
     )
     conn.commit(); conn.close()
@@ -442,7 +462,7 @@ def stats_today():
     row = conn.execute(
         "SELECT COUNT(*) as order_count, COALESCE(SUM(total_amount),0) as revenue, "
         "COALESCE(SUM(item_count),0) as items_sold "
-        "FROM orders WHERE date(created_at)=? AND status='paid'",
+        "FROM orders WHERE date(created_at)=? AND (status='paid' OR status='completed')",
         (today,)
     ).fetchone()
 
@@ -458,7 +478,7 @@ def stats_today():
     top = conn.execute("""
         SELECT oi.product_name, SUM(oi.quantity) as qty, SUM(oi.subtotal) as total
         FROM order_items oi JOIN orders o ON o.id = oi.order_id
-        WHERE date(o.created_at)=? AND o.status='paid'
+        WHERE date(o.created_at)=? AND (o.status='paid' OR o.status='completed')
         GROUP BY oi.product_id ORDER BY qty DESC LIMIT 5
     """, (today,)).fetchall()
 
@@ -502,7 +522,7 @@ def stats_weekly():
         SELECT date(created_at) as day, COUNT(*) as order_count,
                COALESCE(SUM(total_amount),0) as revenue,
                COALESCE(SUM(item_count),0) as items_sold
-        FROM orders WHERE date(created_at) BETWEEN ? AND ? AND status='paid'
+        FROM orders WHERE date(created_at) BETWEEN ? AND ? AND (status='paid' OR status='completed')
         GROUP BY date(created_at) ORDER BY day
     """, (week_start, week_end)).fetchall()
 
@@ -522,7 +542,7 @@ def stats_weekly():
 
     orders_raw = conn.execute("""
         SELECT id, total_amount, item_count, note, payment_method, created_at
-        FROM orders WHERE date(created_at) BETWEEN ? AND ? AND status='paid'
+        FROM orders WHERE date(created_at) BETWEEN ? AND ? AND (status='paid' OR status='completed')
         ORDER BY created_at DESC
     """, (week_start, week_end)).fetchall()
 
@@ -542,7 +562,7 @@ def stats_weekly():
     hour_dist = conn.execute("""
         SELECT CAST(strftime('%H', created_at) AS INTEGER) as hour,
                COUNT(*) as count, COALESCE(SUM(total_amount),0) as revenue
-        FROM orders WHERE date(created_at) BETWEEN ? AND ? AND status='paid'
+        FROM orders WHERE date(created_at) BETWEEN ? AND ? AND (status='paid' OR status='completed')
         GROUP BY hour ORDER BY hour
     """, (week_start, week_end)).fetchall()
 
@@ -712,7 +732,7 @@ def export_weekly_csv():
                o.created_at, oi.product_name, oi.quantity, oi.unit_price, oi.subtotal
         FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id
         WHERE date(o.created_at) BETWEEN ? AND date(?, '+6 days')
-          AND o.status='paid'
+          AND (o.status='paid' OR o.status='completed')
         ORDER BY o.created_at DESC, oi.id
     """, (monday.isoformat(), monday.isoformat())).fetchall()
     conn.close()
@@ -727,7 +747,7 @@ def export_weekly_csv():
 def list_product_options(pid):
     conn = get_db()
     rows = conn.execute(
-        "SELECT id, group_name, option_name, price_adjustment, sort_order "
+        "SELECT id, group_name, option_name, price_adjustment, multi_select, sort_order "
         "FROM product_options WHERE product_id=? ORDER BY group_name, sort_order, id",
         (pid,)
     ).fetchall()
@@ -736,10 +756,11 @@ def list_product_options(pid):
     for r in rows:
         g = r['group_name']
         if g not in groups:
-            groups[g] = []
-        groups[g].append({'id': r['id'], 'option_name': r['option_name'],
+            groups[g] = {'options': [], 'multi_select': bool(r['multi_select'])}
+        groups[g]['options'].append({'id': r['id'], 'option_name': r['option_name'],
                           'price_adjustment': r['price_adjustment'], 'sort_order': r['sort_order']})
-    return jsonify([{'group_name': g, 'options': opts} for g, opts in groups.items()])
+    return jsonify([{'group_name': g, 'options': d['options'], 'multi_select': d['multi_select']}
+                    for g, d in groups.items()])
 
 @app.route('/api/products/<int:pid>/options', methods=['POST'])
 def save_product_options(pid):
@@ -750,12 +771,13 @@ def save_product_options(pid):
     for group in data:
         gname = group.get('group_name', '').strip()
         if not gname: continue
+        multi = 1 if group.get('multi_select') else 0
         for opt in group.get('options', []):
             oname = opt.get('option_name', '').strip()
             if not oname: continue
             conn.execute(
-                "INSERT INTO product_options (product_id, group_name, option_name, price_adjustment, sort_order) VALUES (?,?,?,?,?)",
-                (pid, gname, oname, float(opt.get('price_adjustment', 0)), sort))
+                "INSERT INTO product_options (product_id, group_name, option_name, price_adjustment, multi_select, sort_order) VALUES (?,?,?,?,?,?)",
+                (pid, gname, oname, float(opt.get('price_adjustment', 0)), multi, sort))
             sort += 1
     conn.commit(); conn.close()
     return jsonify({'ok': True})
@@ -773,7 +795,7 @@ def weekly_chart_png():
     conn = get_db()
     rows = conn.execute(
         "SELECT date(created_at) as d, SUM(total_amount) as rev, COUNT(*) as cnt "
-        "FROM orders WHERE date(created_at) BETWEEN ? AND ? AND status='paid' GROUP BY d ORDER BY d",
+        "FROM orders WHERE date(created_at) BETWEEN ? AND ? AND (status='paid' OR status='completed') GROUP BY d ORDER BY d",
         (monday.isoformat(), (monday+timedelta(days=6)).isoformat())
     ).fetchall()
     conn.close()

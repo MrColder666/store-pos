@@ -208,14 +208,16 @@ let selectedOptions = {};
 
 function clickProduct(id, name, finalPrice, discount, origPrice) {
   fetch(`/api/products/${id}/options`).then(r => r.json()).then(opts => {
-    if (opts.length === 0) { addToCart(id, name, finalPrice, ''); return; }
+    if (opts.length === 0) { addToCart(id, name, finalPrice, '', []); return; }
     pendingProduct = { id, name, price: finalPrice };
     document.getElementById('opt-select-title').textContent = `⚙️ ${name} — 选择选项`;
     selectedOptions = {};
     const body = document.getElementById('opt-select-body');
     body.innerHTML = '';
     opts.forEach(g => {
-      let html = `<div style="margin-bottom:12px;"><div style="font-weight:600;font-size:14px;margin-bottom:6px;">${g.group_name}</div>`;
+      const isMulti = g.multi_select ? '1' : '0';
+      const hint = g.multi_select ? '<span style="font-size:10px;color:var(--text-muted);">（可多选）</span>' : '';
+      let html = `<div class="opt-group" data-group="${g.group_name}" data-multi="${isMulti}" style="margin-bottom:12px;"><div style="font-weight:600;font-size:14px;margin-bottom:6px;">${g.group_name} ${hint}</div>`;
       g.options.forEach((o, oi) => {
         const adj = o.price_adjustment > 0 ? `+¥${o.price_adjustment.toFixed(2)}` : '';
         html += `<div class="opt-item" data-group="${g.group_name}" data-option="${o.option_name}" data-price="${o.price_adjustment}" onclick="selectOpt(this)" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:4px;cursor:pointer;">`;
@@ -232,9 +234,28 @@ function selectOpt(el) {
   const group = el.getAttribute('data-group');
   const option = el.getAttribute('data-option');
   const priceAdj = parseFloat(el.getAttribute('data-price')) || 0;
-  selectedOptions[group] = { option, priceAdj };
-  el.parentElement.querySelectorAll('.opt-item').forEach(item => item.style.background = '#fff');
-  el.style.background = '#eef2ff';
+  const groupEl = el.closest('.opt-group');
+  const isMulti = groupEl ? groupEl.getAttribute('data-multi') === '1' : false;
+
+  if (isMulti) {
+    // Multi-select: toggle this option
+    if (!selectedOptions[group]) selectedOptions[group] = [];
+    const idx = selectedOptions[group].findIndex(o => o.option === option);
+    if (idx >= 0) {
+      // Deselect
+      selectedOptions[group].splice(idx, 1);
+      el.style.background = '#fff';
+    } else {
+      // Select
+      selectedOptions[group].push({ option, priceAdj });
+      el.style.background = '#eef2ff';
+    }
+  } else {
+    // Single-select: deselect all, select this one
+    selectedOptions[group] = [{ option, priceAdj }];
+    el.parentElement.querySelectorAll('.opt-item').forEach(item => item.style.background = '#fff');
+    el.style.background = '#eef2ff';
+  }
 }
 
 function closeOptSelect() {
@@ -243,18 +264,22 @@ function closeOptSelect() {
 }
 
 function confirmOptions() {
-  const groups = document.getElementById('opt-select-body').children;
-  for (const g of groups) {
-    const gname = g.querySelector('div:first-child').textContent;
-    if (!selectedOptions[gname]) { toast(`❌ 请选择「${gname}」`); return; }
+  const groupEls = document.getElementById('opt-select-body').querySelectorAll('.opt-group');
+  for (const gEl of groupEls) {
+    const gname = gEl.getAttribute('data-group');
+    const sel = selectedOptions[gname];
+    if (!sel || sel.length === 0) { toast(`❌ 请选择「${gname}」`); return; }
   }
   let extra = 0;
   const strs = [];
   const optsData = [];
-  for (const k in selectedOptions) {
-    extra += selectedOptions[k].priceAdj;
-    strs.push(selectedOptions[k].option);
-    optsData.push({ group: k, option: selectedOptions[k].option, priceAdj: selectedOptions[k].priceAdj });
+  for (const gname in selectedOptions) {
+    const sel = selectedOptions[gname];
+    for (const s of sel) {
+      extra += s.priceAdj;
+      strs.push(s.option);
+      optsData.push({ group: gname, option: s.option, priceAdj: s.priceAdj });
+    }
   }
   addToCart(pendingProduct.id, pendingProduct.name, pendingProduct.price + extra, strs.join(' / '), optsData);
   closeOptSelect();

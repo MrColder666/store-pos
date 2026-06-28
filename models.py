@@ -3,7 +3,7 @@ import sqlite3
 import os
 from datetime import datetime, date, timedelta
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'store.db')
+DB_PATH = os.environ.get('DB_PATH') or os.path.join(os.path.dirname(__file__), 'store.db')
 
 
 def get_db():
@@ -35,7 +35,7 @@ def init_db():
             item_count INTEGER NOT NULL,
             note TEXT DEFAULT '',
             status TEXT DEFAULT 'pending'
-                CHECK(status IN ('pending', 'paid', 'refunded', 'cancelled')),
+                CHECK(status IN ('pending', 'paid', 'completed', 'refunded', 'cancelled')),
             payment_status TEXT DEFAULT 'unpaid',
             paid_amount REAL DEFAULT 0,
             change_amount REAL DEFAULT 0,
@@ -61,6 +61,7 @@ def init_db():
             group_name TEXT NOT NULL,
             option_name TEXT NOT NULL,
             price_adjustment REAL DEFAULT 0 CHECK(price_adjustment >= 0),
+            multi_select INTEGER DEFAULT 0,
             sort_order INTEGER DEFAULT 0,
             FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
         );
@@ -74,6 +75,41 @@ def init_db():
             FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
         );
     """)
+
+    # ── v2.2 Migration: multi_select on product_options ──────
+    try:
+        conn.execute("ALTER TABLE product_options ADD COLUMN multi_select INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # ── v2.2 Migration: add 'completed' to orders status ──────
+    # SQLite can't ALTER CHECK, so recreate the table if needed
+    try:
+        conn.execute("INSERT INTO orders (id, total_amount, item_count, status) VALUES (-2, 0, 0, 'completed')")
+        conn.execute("DELETE FROM orders WHERE id=-2")
+    except sqlite3.OperationalError:
+        conn.executescript("""
+            PRAGMA foreign_keys=OFF;
+            BEGIN TRANSACTION;
+            CREATE TABLE orders_v3 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                total_amount REAL NOT NULL,
+                item_count INTEGER NOT NULL,
+                note TEXT DEFAULT '',
+                status TEXT DEFAULT 'pending'
+                    CHECK(status IN ('pending', 'paid', 'completed', 'refunded', 'cancelled')),
+                payment_status TEXT DEFAULT 'unpaid',
+                paid_amount REAL DEFAULT 0,
+                change_amount REAL DEFAULT 0,
+                payment_method TEXT DEFAULT '',
+                created_at TEXT DEFAULT (datetime('now','localtime'))
+            );
+            INSERT INTO orders_v3 SELECT * FROM orders;
+            DROP TABLE orders;
+            ALTER TABLE orders_v3 RENAME TO orders;
+            COMMIT;
+            PRAGMA foreign_keys=ON;
+        """)
 
     # ── v2.1 Migration: discount_type + REAL discount ──────────
     # Check if discount_type column exists
@@ -139,7 +175,7 @@ def init_db():
                 item_count INTEGER NOT NULL,
                 note TEXT DEFAULT '',
                 status TEXT DEFAULT 'pending'
-                    CHECK(status IN ('pending', 'paid', 'refunded', 'cancelled')),
+                    CHECK(status IN ('pending', 'paid', 'completed', 'refunded', 'cancelled')),
                 payment_status TEXT DEFAULT 'unpaid',
                 paid_amount REAL DEFAULT 0,
                 change_amount REAL DEFAULT 0,
