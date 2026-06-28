@@ -18,7 +18,7 @@
     <button class="btn btn-sm filter-btn active" data-status="" onclick="setFilter('')">全部</button>
     <button class="btn btn-sm filter-btn" data-status="pending" onclick="setFilter('pending')">⏳ 待支付</button>
     <button class="btn btn-sm filter-btn" data-status="paid" onclick="setFilter('paid')">💳 已支付</button>
-    <button class="btn btn-sm filter-btn" data-status="completed" onclick="setFilter('completed')">🎁 已完成</button>
+    <button class="btn btn-sm filter-btn" data-status="completed" onclick="setFilter('completed')">✅ 已完成</button>
     <button class="btn btn-sm filter-btn" data-status="refunded" onclick="setFilter('refunded')">↩️ 已退款</button>
     <button class="btn btn-sm filter-btn" data-status="cancelled" onclick="setFilter('cancelled')">❌ 已取消</button>
   </div>
@@ -50,7 +50,7 @@
       <button class="btn" style="background:#f1f5f9;" onclick="closeDetail()">关闭</button>
       <button class="btn btn-primary" id="btn-pay-now" onclick="payNow()" style="display:none;">💳 立即收款</button>
       <button class="btn btn-danger" id="btn-refund" onclick="refundOrder()" style="display:none;">退款</button>
-      <button class="btn btn-accent" id="btn-complete" onclick="completeOrder()" style="display:none;">🎁 完成交付</button>
+      <button class="btn btn-accent" id="btn-complete" onclick="completeOrder()" style="display:none;">✅ 完成交付</button>
       <button class="btn btn-danger" style="background:#dc2626;" id="btn-delete" onclick="deleteOrder()">🗑 删除</button>
     </div>
   </div>
@@ -114,7 +114,7 @@ let payNowOrderId = null;
 const STATUS_BADGES = {
   pending: '<span class="badge badge-warning">⏳ 待支付</span>',
   paid: '<span class="badge badge-success">💳 已支付</span>',
-  completed: '<span class="badge badge-success">🎁 已完成</span>',
+  completed: '<span class="badge badge-success">✅ 已完成</span>',
   refunded: '<span class="badge badge-danger">↩️ 已退款</span>',
   cancelled: '<span class="badge" style="background:#e2e8f0;color:#64748b;">❌ 已取消</span>'
 };
@@ -283,7 +283,7 @@ async function completeOrder() {
   if (!ok) return;
   const res = await fetch(`/api/orders/${detailOrderId}/complete`, { method: 'POST' });
   const data = await res.json();
-  if (data.ok) { toast('🎁 订单已完成'); closeDetail(); loadOrders(currentPage); }
+  if (data.ok) { toast('✅ 订单已完成'); closeDetail(); loadOrders(currentPage); }
   else { toast('❌ ' + (data.error || '操作失败')); }
 }
 
