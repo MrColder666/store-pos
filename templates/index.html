@@ -434,19 +434,11 @@ async function openPayModal() {
   // Save snapshot for receipt
   cartBackup = cart.map(c => ({...c}));
 
-  // Build order summary
-  let html = '', total = 0;
-  cart.forEach(c => {
-    const sub = c.price * c.qty;
-    total += sub;
-    html += `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px;">
-      <span>${c.name}${c.optStr ? ' <span style="color:#6366f1;">· '+c.optStr+'</span>' : ''} ×${c.qty}</span>
-      <span>¥${sub.toFixed(2)}</span>
-    </div>`;
-  });
-  document.getElementById('pay-order-summary').innerHTML = html;
-  document.getElementById('pay-total').textContent = total.toFixed(2);
-
+  // Show "calculating" state
+  document.getElementById('pay-order-summary').innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:10px;">计算中...</div>';
+  document.getElementById('pay-total').textContent = '...';
+  document.getElementById('pay-modal-bg').classList.add('active');
+  
   // Reset payment method
   selectedPayMethod = '';
   document.querySelectorAll('.pay-method').forEach(el => el.classList.remove('active'));
@@ -456,12 +448,52 @@ async function openPayModal() {
   document.getElementById('pay-change-display').style.display = 'none';
   document.getElementById('btn-confirm-pay').disabled = true;
 
-  document.getElementById('pay-modal-bg').classList.add('active');
+  // Create order first to get the real total from backend
+  try {
+    const note = document.getElementById('order-note').value.trim();
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        items: cart.map(c => ({ product_id: c.id, quantity: c.qty, options: c.options || [] })),
+        note: note
+      })
+    });
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById('pay-order-summary').innerHTML = '<div style="color:var(--danger);text-align:center;">❌ ' + data.error + '</div>';
+      document.getElementById('pay-total').textContent = '0.00';
+      return;
+    }
+    // Store the pre-created order ID for payment
+    window._pendingOrderId = data.order_id;
+    window._pendingOrderTotal = data.total;
+
+    // Build order summary
+    let html = '';
+    cart.forEach(c => {
+      const sub = c.price * c.qty;
+      html += `<div style=\"display:flex;justify-content:space-between;padding:3px 0;font-size:13px;\">
+        <span>${c.name}${c.optStr ? ' <span style=\"color:#6366f1;\">· '+c.optStr+'</span>' : ''} ×${c.qty}</span>
+        <span>${sub > 0 ? '¥' + sub.toFixed(2) : '优惠券'}</span>
+      </div>`;
+    });
+    document.getElementById('pay-order-summary').innerHTML = html;
+    document.getElementById('pay-total').textContent = data.total.toFixed(2);
+  } catch (e) {
+    document.getElementById('pay-order-summary').innerHTML = '<div style="color:var(--danger);text-align:center;">❌ 网络错误</div>';
+  }
 }
 
 function closePayModal() {
   document.getElementById('pay-modal-bg').classList.remove('active');
   selectedPayMethod = '';
+  // Cancel the pre-created order if not paid
+  if (window._pendingOrderId) {
+    fetch(`/api/orders/${window._pendingOrderId}/cancel`, { method: 'POST' });
+    window._pendingOrderId = null;
+    window._pendingOrderTotal = null;
+  }
 }
 
 function selectPayMethod(method) {
@@ -529,44 +561,28 @@ async function confirmPay() {
   btn.disabled = true;
   btn.textContent = '⏳ 处理中...';
 
-  const frontendTotal = parseFloat(document.getElementById('pay-total').textContent) || 0;
-  let paidAmount = frontendTotal;
+  const orderId = window._pendingOrderId;
+  const orderTotal = window._pendingOrderTotal;
+  if (!orderId) {
+    toast('❌ 订单未创建，请重新打开结算');
+    closePayModal();
+    return;
+  }
+
+  const total = parseFloat(document.getElementById('pay-total').textContent) || 0;
+  let paidAmount = total;
   if (selectedPayMethod === 'cash') {
     paidAmount = parseFloat(document.getElementById('pay-cash-input').value) || 0;
+    if (paidAmount < total) {
+      toast('❌ 实收金额不足，应收 ¥' + total.toFixed(2));
+      btn.textContent = '✅ 确认收款';
+      btn.disabled = false;
+      return;
+    }
   }
 
   try {
-    // Step 1: Create order
-    const note = document.getElementById('order-note').value.trim();
-    const res1 = await fetch('/api/orders', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        items: cart.map(c => ({ product_id: c.id, quantity: c.qty, options: c.options || [] })),
-        note: note
-      })
-    });
-    const data1 = await res1.json();
-    if (data1.error) {
-      toast('❌ ' + data1.error);
-      btn.textContent = '✅ 确认收款';
-      btn.disabled = false;
-      return;
-    }
-
-    const orderId = data1.order_id;
-    const orderTotal = data1.total;
-
-    // Update the payment modal to show the backend-calculated total
-    document.getElementById('pay-total').textContent = orderTotal.toFixed(2);
-    if (selectedPayMethod === 'cash' && paidAmount < orderTotal) {
-      toast('❌ 实收金额不足，应收 ¥' + orderTotal.toFixed(2));
-      btn.textContent = '✅ 确认收款';
-      btn.disabled = false;
-      return;
-    }
-
-    // Step 2: Process payment
+    // Process payment
     const res2 = await fetch(`/api/orders/${orderId}/pay`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -595,6 +611,8 @@ async function confirmPay() {
     renderCart();
     loadProducts();
     document.getElementById('order-note').value = '';
+    window._pendingOrderId = null;
+    window._pendingOrderTotal = null;
   } catch (e) {
     toast('❌ 网络错误');
     btn.textContent = '✅ 确认收款';
