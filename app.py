@@ -65,19 +65,23 @@ def add_product():
         stock = int(data.get('stock', 0))
         discount = float(data.get('discount', 0))
         discount_type = data.get('discount_type', 'percent')
-        if discount < 0:
+        is_coupon = 1 if data.get('is_coupon') else 0
+        coupon_mode = data.get('coupon_mode', 'total')
+        if is_coupon and coupon_mode not in ('total', 'item'):
+            return jsonify({'error': '优惠券类型无效'}), 400
+        if not is_coupon and discount < 0:
             return jsonify({'error': '折扣不能为负数'}), 400
-        if discount_type not in ('percent', 'fixed'):
+        if not is_coupon and discount_type not in ('percent', 'fixed'):
             return jsonify({'error': '折扣类型无效'}), 400
-        if discount_type == 'percent' and discount > 100:
+        if not is_coupon and discount_type == 'percent' and discount > 100:
             return jsonify({'error': '百分比折扣不能超过 100%'}), 400
     except (ValueError, TypeError):
         return jsonify({'error': '价格或库存格式错误'}), 400
     category = data.get('category', '').strip()
     conn = get_db()
     conn.execute(
-        "INSERT INTO products (name, price, category, stock, discount, discount_type) VALUES (?,?,?,?,?,?)",
-        (name, price, category, stock, discount, discount_type)
+        "INSERT INTO products (name, price, category, stock, discount, discount_type, is_coupon, coupon_mode) VALUES (?,?,?,?,?,?,?,?)",
+        (name, price, category, stock, discount, discount_type, is_coupon, coupon_mode)
     )
     conn.commit(); conn.close()
     return jsonify({'ok': True})
@@ -93,19 +97,23 @@ def update_product(pid):
         stock = int(data.get('stock', 0))
         discount = float(data.get('discount', 0))
         discount_type = data.get('discount_type', 'percent')
-        if discount < 0:
+        is_coupon = 1 if data.get('is_coupon') else 0
+        coupon_mode = data.get('coupon_mode', 'total')
+        if is_coupon and coupon_mode not in ('total', 'item'):
+            return jsonify({'error': '优惠券类型无效'}), 400
+        if not is_coupon and discount < 0:
             return jsonify({'error': '折扣不能为负数'}), 400
-        if discount_type not in ('percent', 'fixed'):
+        if not is_coupon and discount_type not in ('percent', 'fixed'):
             return jsonify({'error': '折扣类型无效'}), 400
-        if discount_type == 'percent' and discount > 100:
+        if not is_coupon and discount_type == 'percent' and discount > 100:
             return jsonify({'error': '百分比折扣不能超过 100%'}), 400
     except (ValueError, TypeError):
         return jsonify({'error': '价格或库存格式错误'}), 400
     category = data.get('category', '').strip()
     conn = get_db()
     conn.execute(
-        "UPDATE products SET name=?, price=?, category=?, stock=?, discount=?, discount_type=? WHERE id=?",
-        (name, price, category, stock, discount, discount_type, pid)
+        "UPDATE products SET name=?, price=?, category=?, stock=?, discount=?, discount_type=?, is_coupon=?, coupon_mode=? WHERE id=?",
+        (name, price, category, stock, discount, discount_type, is_coupon, coupon_mode, pid)
     )
     conn.commit(); conn.close()
     return jsonify({'ok': True})
@@ -132,6 +140,8 @@ def create_order():
     total = 0.0
     total_qty = 0
     order_items = []
+    coupon_discount = 0.0
+    coupon_name = ''
 
     for item in items:
         pid = item.get('product_id')
@@ -141,6 +151,17 @@ def create_order():
         row = conn.execute("SELECT * FROM products WHERE id=?", (pid,)).fetchone()
         if not row:
             continue
+
+        # ── Coupon handling ──
+        if row['is_coupon']:
+            coupon_amount = float(row['price'] or 0)
+            coupon_name = row['name']
+            if row['coupon_mode'] == 'item':
+                coupon_discount = coupon_amount * qty
+            else:
+                coupon_discount = coupon_amount
+            continue
+
         # Check stock
         if row['stock'] < qty:
             conn.close()
@@ -186,6 +207,10 @@ def create_order():
     if not order_items:
         conn.close()
         return jsonify({'error': '未找到有效商品'}), 400
+
+    # Apply coupon discount
+    if coupon_discount > 0:
+        total = round(max(0, total - coupon_discount), 2)
 
     total = round(total, 2)
     cur = conn.execute(

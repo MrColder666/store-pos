@@ -26,6 +26,8 @@ def init_db():
             stock INTEGER DEFAULT 0 CHECK(stock >= 0),
             discount REAL DEFAULT 0 CHECK(discount >= 0),
             discount_type TEXT DEFAULT 'percent',
+            is_coupon INTEGER DEFAULT 0,
+            coupon_mode TEXT DEFAULT 'total',
             created_at TEXT DEFAULT (datetime('now','localtime'))
         );
 
@@ -75,6 +77,16 @@ def init_db():
             FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
         );
     """)
+
+    # ── v2.2.1 Migration: coupon support ────
+    try:
+        conn.execute("ALTER TABLE products ADD COLUMN is_coupon INTEGER DEFAULT 0")
+    except (sqlite3.OperationalError, sqlite3.IntegrityError):
+        pass
+    try:
+        conn.execute("ALTER TABLE products ADD COLUMN coupon_mode TEXT DEFAULT 'total'")
+    except (sqlite3.OperationalError, sqlite3.IntegrityError):
+        pass
 
     # ── v2.2 Migration: multi_select on product_options ──────
     try:

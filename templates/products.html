@@ -44,6 +44,17 @@
       <label>库存</label>
       <input class="form-input" id="f-stock" type="number" min="0" placeholder="0">
     </div>
+    <div class="form-group" id="coupon-section" style="display:none;">
+      <label>优惠券类型</label>
+      <select class="form-input" id="f-coupon-mode">
+        <option value="total">整体折扣（减总额）</option>
+        <option value="item">单品折扣（每件减）</option>
+      </select>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <input type="checkbox" id="f-is-coupon" onchange="toggleCoupon()" style="width:18px;height:18px;accent-color:var(--primary);">
+      <label for="f-is-coupon" style="cursor:pointer;font-weight:600;font-size:13px;margin:0;">🎫 优惠券（需密码才能加入购物车）</label>
+    </div>
     <div class="form-group">
       <label>折扣方式</label>
       <select class="form-input" id="f-discount-type" onchange="updateDiscountInput()">
@@ -114,6 +125,11 @@ function confirmDialog(msg) {
 }
 
 function closeConfirm() { document.getElementById('confirm-bg').classList.remove('active'); }
+
+function toggleCoupon() {
+  const isCoupon = document.getElementById('f-is-coupon').checked;
+  document.getElementById('coupon-section').style.display = isCoupon ? 'block' : 'none';
+}
 
 function updateDiscountInput() {
   const dt = document.getElementById('f-discount-type').value;
@@ -188,7 +204,10 @@ function openAdd() {
   document.getElementById('f-stock').value = '';
   document.getElementById('f-discount').value = '';
   document.getElementById('f-discount-type').value = 'percent';
+  document.getElementById('f-is-coupon').checked = false;
+  document.getElementById('f-coupon-mode').value = 'total';
   updateDiscountInput();
+  toggleCoupon();
   document.getElementById('modal-bg').classList.add('active');
 }
 
@@ -205,6 +224,9 @@ function editProduct(id) {
     document.getElementById('f-discount-type').value = p.discount_type || 'percent';
     updateDiscountInput();
     document.getElementById('f-discount').value = p.discount || 0;
+    document.getElementById('f-is-coupon').checked = p.is_coupon ? true : false;
+    document.getElementById('f-coupon-mode').value = p.coupon_mode || 'total';
+    toggleCoupon();
     document.getElementById('modal-bg').classList.add('active');
   });
 }
@@ -220,6 +242,8 @@ async function saveProduct() {
   const stock = parseInt(document.getElementById('f-stock').value) || 0;
   const discount = parseFloat(document.getElementById('f-discount').value) || 0;
   const discount_type = document.getElementById('f-discount-type').value;
+  const is_coupon = document.getElementById('f-is-coupon').checked;
+  const coupon_mode = document.getElementById('f-coupon-mode').value;
 
   if (!name) { toast('请输入商品名称'); return; }
   if (isNaN(price) || price < 0) { toast('请输入有效价格'); return; }
@@ -232,7 +256,7 @@ async function saveProduct() {
   const res = await fetch(url, {
     method,
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ name, price, category, stock, discount, discount_type })
+    body: JSON.stringify({ name, price, category, stock, discount, discount_type, is_coupon, coupon_mode })
   });
   const data = await res.json();
   if (data.error) { toast('❌ ' + data.error); return; }
