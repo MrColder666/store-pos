@@ -529,16 +529,10 @@ async function confirmPay() {
   btn.disabled = true;
   btn.textContent = '⏳ 处理中...';
 
-  const total = parseFloat(document.getElementById('pay-total').textContent) || 0;
-  let paidAmount = total;
+  const frontendTotal = parseFloat(document.getElementById('pay-total').textContent) || 0;
+  let paidAmount = frontendTotal;
   if (selectedPayMethod === 'cash') {
     paidAmount = parseFloat(document.getElementById('pay-cash-input').value) || 0;
-    if (paidAmount < total) {
-      toast('❌ 实收金额不足');
-      btn.textContent = '✅ 确认收款';
-      btn.disabled = false;
-      return;
-    }
   }
 
   try {
@@ -561,6 +555,16 @@ async function confirmPay() {
     }
 
     const orderId = data1.order_id;
+    const orderTotal = data1.total;
+
+    // Update the payment modal to show the backend-calculated total
+    document.getElementById('pay-total').textContent = orderTotal.toFixed(2);
+    if (selectedPayMethod === 'cash' && paidAmount < orderTotal) {
+      toast('❌ 实收金额不足，应收 ¥' + orderTotal.toFixed(2));
+      btn.textContent = '✅ 确认收款';
+      btn.disabled = false;
+      return;
+    }
 
     // Step 2: Process payment
     const res2 = await fetch(`/api/orders/${orderId}/pay`, {
@@ -568,7 +572,7 @@ async function confirmPay() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         method: selectedPayMethod,
-        paid_amount: paidAmount
+        paid_amount: selectedPayMethod === 'cash' ? paidAmount : orderTotal
       })
     });
     const data2 = await res2.json();
