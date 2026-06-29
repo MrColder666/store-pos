@@ -199,22 +199,22 @@ async function loadProducts() {
         ? `<span class="discount-badge discount-badge-fixed">-¥${parseFloat(p.discount).toFixed(2)}</span>`
         : `<span class="discount-badge discount-badge-percent">-${parseFloat(p.discount).toFixed(1)}%</span>`)
       : '';
-    const couponVal = isCoupon ? (p.discount > 0 ? parseFloat(p.discount).toFixed(2) : p.price.toFixed(2)) : '0';
+    const couponVal = isCoupon ? parseFloat(p.discount || p.price || 0) : 0;
+    const couponPct = isCoupon && p.discount_type === 'percent';
+    const couponLabel = isCoupon ? (couponPct ? '- ' + couponVal.toFixed(1) + '%' : '- ¥' + couponVal.toFixed(2)) : '';
     const couponBadge = isCoupon ? '<span class="discount-badge discount-badge-fixed">🎫 优惠券</span>' : '';
     const coupMode = isCoupon ? (p.coupon_mode || 'total') : '';
+    const clickFinalPrice = isCoupon ? 0 : finalPrice;  // coupon price always 0 in cart, backend handles discount
     return `
-    <div class="card" style="cursor:pointer;padding:12px 16px;" onclick="clickProduct(${p.id},'${p.name.replace(/'/g,"\\'")}',${isCoupon ? couponVal : finalPrice},${p.discount||0},${p.price},${isCoupon},'${coupMode}')">
+    <div class="card" style="cursor:pointer;padding:12px 16px;" onclick="clickProduct(${p.id},'${p.name.replace(/'/g,"\\'")}',${clickFinalPrice},${p.discount||0},${p.price},${isCoupon},'${coupMode}')">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div>
           <div style="font-weight:600;font-size:15px;">${p.name}</div>
           <div style="font-size:12px;color:var(--text-secondary);">${isCoupon ? '优惠券 · 需密码 · ' + (coupMode === 'item' ? '指定单品' : '减总额') : '库存: '+p.stock+' · '+p.category}</div>
         </div>
         <div style="font-size:18px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:6px;">
-          ${isCoupon ? `<span style="color:#d97706;">-¥${couponVal}</span>` : (hasDiscount ? `<span style="text-decoration:line-through;color:var(--text-muted);font-size:13px;font-weight:400;">¥${p.price.toFixed(2)}</span> <span>¥${finalPrice.toFixed(2)}</span>` : `<span>¥${finalPrice.toFixed(2)}</span>`)}
+          ${isCoupon ? `<span style="color:#d97706;">${couponLabel}</span>` : (hasDiscount ? `<span style="text-decoration:line-through;color:var(--text-muted);font-size:13px;font-weight:400;">¥${p.price.toFixed(2)}</span> <span>¥${finalPrice.toFixed(2)}</span>` : `<span>¥${finalPrice.toFixed(2)}</span>`)}
           ${discountBadge}${couponBadge}
-        </div>
-      </div>
-    </div>
         </div>
       </div>
     </div>
@@ -333,11 +333,9 @@ function confirmCouponPw() {
   if (pw !== '102938') { toast('❌ 密码错误'); return; }
   document.getElementById('coupon-pw-bg').classList.remove('active');
   const p = pendingProduct;
-  if (p.couponMode === 'item' && p.targetItem) {
-    addToCart(p.id, p.name + ' → ' + p.targetItem.name, -p.price, p.targetItem.name, []);
-  } else {
-    addToCart(p.id, p.name, -p.price, '', []);
-  }
+  const cName = (p.couponMode === 'item' && p.targetItem) ? (p.name + ' → ' + p.targetItem.name) : p.name;
+  // Add to cart with price=0 and coupon tag — backend calculates the discount
+  addToCart(p.id, cName, 0, (p.couponMode === 'item' && p.targetItem) ? p.targetItem.name : '', []);
   pendingProduct = null;
 }
 function closeCouponItem() {
@@ -395,13 +393,15 @@ function renderCart() {
   el.innerHTML = cart.map((c, i) => {
     const sub = c.price * c.qty;
     total += sub;
-    const isCoupon = c.price < 0;
+    // Check if this item is a coupon (price=0 but name starts with coupon-like pattern)
+    // Coupons are identified by having a product that's a coupon
+    const isCouponItem = c.price === 0 && sub === 0;
     return `
-      <div class="cart-item" ${isCoupon ? 'style="background:#fff7ed;border-radius:6px;padding:8px;margin:4px 0;border:1px solid #fed7aa;"' : ''}>
+      <div class="cart-item" ${isCouponItem ? 'style="background:#fff7ed;border-radius:6px;padding:8px;margin:4px 0;border:1px solid #fed7aa;"' : ''}>
         <div>
-          <div style="font-weight:600;">${isCoupon ? '🎫 ' : ''}${c.name}</div>
+          <div style="font-weight:600;">${isCouponItem ? '🎫 ' : ''}${c.name}</div>
           ${c.optStr ? `<div style="font-size:11px;color:#6366f1;">📋 ${c.optStr}</div>` : ''}
-          <div style="font-size:12px;color:${isCoupon ? '#c2410c' : 'var(--text-secondary)'};">${isCoupon ? '-¥' + Math.abs(c.price).toFixed(2) : '¥' + c.price.toFixed(2)}</div>
+          <div style="font-size:12px;color:${isCouponItem ? '#c2410c' : 'var(--text-secondary)'};">${isCouponItem ? '优惠券' : '¥' + c.price.toFixed(2)}</div>
         </div>
         <div class="cart-qty">
           <button onclick="changeQty(${i},-1)">−</button>
