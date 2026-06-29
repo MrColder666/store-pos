@@ -132,11 +132,10 @@ function toggleCoupon() {
     priceEl.value = '0';
     priceEl.disabled = true;
     priceEl.style.background = '#f1f5f9';
-    document.getElementById('f-discount-label').textContent = '优惠券面值';
     document.getElementById('f-discount-type').value = 'fixed';
-    document.getElementById('f-discount').step = '0.01';
-    document.getElementById('f-discount').placeholder = '例: 3 表示减 ¥3';
-    document.getElementById('f-discount').removeAttribute('max');
+    document.getElementById('f-discount-label').textContent = '优惠券面值';
+    updateDiscountInput();
+    updateCouponLabel();
   } else {
     priceEl.disabled = false;
     priceEl.style.background = '';

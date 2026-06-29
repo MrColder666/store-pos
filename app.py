@@ -146,6 +146,8 @@ def create_order():
     order_items = []
     coupon_discount = 0.0
     coupon_name = ''
+    coupon_type = 'fixed'
+    coupon_mode = 'total'
 
     for item in items:
         pid = item.get('product_id')
@@ -160,10 +162,10 @@ def create_order():
         if row['is_coupon']:
             coupon_name = row['name']
             coupon_discount = float(row['discount'] or row['price'] or 0)
+            coupon_type = row['discount_type'] or 'fixed'
+            coupon_mode = row['coupon_mode'] or 'total'
             if coupon_discount <= 0:
                 continue
-            if (row['coupon_mode'] or 'total') == 'item':
-                coupon_discount *= qty
             continue
 
         # Check stock
@@ -214,6 +216,10 @@ def create_order():
 
     # Apply coupon discount
     if coupon_discount > 0:
+        if coupon_type == 'percent':
+            coupon_discount = round(total * coupon_discount / 100, 2)
+        if coupon_mode == 'item':
+            coupon_discount *= total_qty
         total = round(max(0, total - coupon_discount), 2)
 
     total = round(total, 2)
