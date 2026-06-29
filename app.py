@@ -66,6 +66,8 @@ def add_product():
         discount = float(data.get('discount', 0))
         discount_type = data.get('discount_type', 'percent')
         is_coupon = 1 if data.get('is_coupon') else 0
+        if is_coupon:
+            price = 0
         coupon_mode = data.get('coupon_mode', 'total')
         if is_coupon and coupon_mode not in ('total', 'item'):
             return jsonify({'error': '优惠券类型无效'}), 400
@@ -98,6 +100,8 @@ def update_product(pid):
         discount = float(data.get('discount', 0))
         discount_type = data.get('discount_type', 'percent')
         is_coupon = 1 if data.get('is_coupon') else 0
+        if is_coupon:
+            price = 0
         coupon_mode = data.get('coupon_mode', 'total')
         if is_coupon and coupon_mode not in ('total', 'item'):
             return jsonify({'error': '优惠券类型无效'}), 400
@@ -154,12 +158,12 @@ def create_order():
 
         # ── Coupon handling ──
         if row['is_coupon']:
-            coupon_amount = float(row['price'] or 0)
             coupon_name = row['name']
-            if row['coupon_mode'] == 'item':
-                coupon_discount = coupon_amount * qty
-            else:
-                coupon_discount = coupon_amount
+            coupon_discount = float(row['discount'] or row['price'] or 0)
+            if coupon_discount <= 0:
+                continue
+            if (row['coupon_mode'] or 'total') == 'item':
+                coupon_discount *= qty
             continue
 
         # Check stock

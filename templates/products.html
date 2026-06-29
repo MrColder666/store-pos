@@ -44,26 +44,24 @@
       <label>库存</label>
       <input class="form-input" id="f-stock" type="number" min="0" placeholder="0">
     </div>
-    <div class="form-group" id="coupon-section" style="display:none;">
-      <label>优惠券类型</label>
-      <select class="form-input" id="f-coupon-mode">
-        <option value="total">整体折扣（减总额）</option>
-        <option value="item">单品折扣（每件减）</option>
-      </select>
-    </div>
     <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
       <input type="checkbox" id="f-is-coupon" onchange="toggleCoupon()" style="width:18px;height:18px;accent-color:var(--primary);">
-      <label for="f-is-coupon" style="cursor:pointer;font-weight:600;font-size:13px;margin:0;">🎫 优惠券（需密码才能加入购物车）</label>
+      <label for="f-is-coupon" style="cursor:pointer;font-weight:600;font-size:13px;margin:0;">🎫 优惠券（密码加入购物车，价格将设为 ¥0）</label>
     </div>
-    <div class="form-group">
-      <label>折扣方式</label>
+    <div class="form-group" id="coupon-section" style="display:none;">
+      <label>优惠方式</label>
+      <select class="form-input" id="f-coupon-mode" onchange="updateCouponLabel()">
+        <option value="total">整体减价（减订单总额）</option>
+        <option value="item">单品减价（指定购物车中某件商品）</option>
+      </select>
+    </div>
+    <div class="form-group" id="discount-section">
+      <label id="f-discount-label">折扣百分比</label>
       <select class="form-input" id="f-discount-type" onchange="updateDiscountInput()">
         <option value="percent">百分比 (%)</option>
         <option value="fixed">固定减价 (¥)</option>
       </select>
-    </div>
-    <div class="form-group">
-      <label id="f-discount-label">折扣百分比</label>
+      <div style="margin-top:4px;"></div>
       <input class="form-input" id="f-discount" type="number" min="0" step="0.1" placeholder="0 = 无折扣">
     </div>
     <div class="btn-row">
@@ -129,6 +127,30 @@ function closeConfirm() { document.getElementById('confirm-bg').classList.remove
 function toggleCoupon() {
   const isCoupon = document.getElementById('f-is-coupon').checked;
   document.getElementById('coupon-section').style.display = isCoupon ? 'block' : 'none';
+  const priceEl = document.getElementById('f-price');
+  if (isCoupon) {
+    priceEl.value = '0';
+    priceEl.disabled = true;
+    priceEl.style.background = '#f1f5f9';
+    document.getElementById('f-discount-label').textContent = '优惠券面值';
+    document.getElementById('f-discount-type').value = 'fixed';
+    document.getElementById('f-discount').step = '0.01';
+    document.getElementById('f-discount').placeholder = '例: 3 表示减 ¥3';
+    document.getElementById('f-discount').removeAttribute('max');
+  } else {
+    priceEl.disabled = false;
+    priceEl.style.background = '';
+    updateDiscountInput();
+  }
+}
+function updateCouponLabel() {
+  const mode = document.getElementById('f-coupon-mode').value;
+  const label = document.getElementById('f-discount-label');
+  if (mode === 'item') {
+    label.textContent = '优惠券面值（每件减）';
+  } else {
+    label.textContent = '优惠券面值（减总额）';
+  }
 }
 
 function updateDiscountInput() {
@@ -237,13 +259,14 @@ function closeModal() {
 
 async function saveProduct() {
   const name = document.getElementById('f-name').value.trim();
-  const price = parseFloat(document.getElementById('f-price').value);
+  let price = parseFloat(document.getElementById('f-price').value);
   const category = document.getElementById('f-category').value.trim();
   const stock = parseInt(document.getElementById('f-stock').value) || 0;
   const discount = parseFloat(document.getElementById('f-discount').value) || 0;
   const discount_type = document.getElementById('f-discount-type').value;
   const is_coupon = document.getElementById('f-is-coupon').checked;
   const coupon_mode = document.getElementById('f-coupon-mode').value;
+  if (is_coupon) price = 0;
 
   if (!name) { toast('请输入商品名称'); return; }
   if (isNaN(price) || price < 0) { toast('请输入有效价格'); return; }

@@ -51,6 +51,29 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Coupon Password Modal -->
+<div class="modal-bg" id="coupon-pw-bg">
+  <div class="modal" style="text-align:center;max-width:360px;">
+    <h2 id="coupon-pw-title">🎫 输入优惠券密码</h2>
+    <input class="form-input" id="coupon-pw-input" type="password" placeholder="请输入密码" style="text-align:center;font-size:18px;margin-bottom:12px;">
+    <div class="btn-row">
+      <button class="btn" style="background:#f1f5f9;" onclick="closeCouponPw()">取消</button>
+      <button class="btn btn-primary" onclick="confirmCouponPw()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- Coupon Item Select Modal (per-item mode) -->
+<div class="modal-bg" id="coupon-item-bg">
+  <div class="modal" style="max-height:80vh;overflow-y:auto;">
+    <h2 id="coupon-item-title">🎫 选择要应用优惠券的商品</h2>
+    <div id="coupon-item-list"></div>
+    <div class="btn-row">
+      <button class="btn" style="background:#f1f5f9;" onclick="closeCouponItem()">取消</button>
+    </div>
+  </div>
+</div>
+
 <!-- Option Select Modal -->
 <div class="modal-bg" id="opt-select-bg">
   <div class="modal" style="max-height:80vh;overflow-y:auto;">
@@ -157,10 +180,12 @@ async function loadProducts() {
   const search = document.getElementById('search-input').value;
   const res = await fetch('/api/products?search=' + encodeURIComponent(search));
   const products = await res.json();
+  window._productCache = products;
   const el = document.getElementById('products-list');
   el.innerHTML = products.map(p => {
     const hasDiscount = p.discount > 0;
     const isFixed = p.discount_type === 'fixed';
+    const isCoupon = p.is_coupon ? true : false;
     let finalPrice = p.price;
     if (hasDiscount) {
       if (isFixed) {
@@ -169,23 +194,27 @@ async function loadProducts() {
         finalPrice = p.price * (100 - p.discount) / 100;
       }
     }
-    const discountBadge = hasDiscount
+    const discountBadge = hasDiscount && !isCoupon
       ? (isFixed
         ? `<span class="discount-badge discount-badge-fixed">-¥${parseFloat(p.discount).toFixed(2)}</span>`
         : `<span class="discount-badge discount-badge-percent">-${parseFloat(p.discount).toFixed(1)}%</span>`)
       : '';
-    const isCoupon = p.is_coupon ? true : false;
+    const couponVal = isCoupon ? (p.discount > 0 ? parseFloat(p.discount).toFixed(2) : p.price.toFixed(2)) : '0';
     const couponBadge = isCoupon ? '<span class="discount-badge discount-badge-fixed">🎫 优惠券</span>' : '';
+    const coupMode = isCoupon ? (p.coupon_mode || 'total') : '';
     return `
-    <div class="card" style="cursor:pointer;padding:12px 16px;" onclick="clickProduct(${p.id},'${p.name.replace(/'/g,"\\'")}',${finalPrice},${p.discount||0},${p.price},${isCoupon})">
+    <div class="card" style="cursor:pointer;padding:12px 16px;" onclick="clickProduct(${p.id},'${p.name.replace(/'/g,"\\'")}',${isCoupon ? couponVal : finalPrice},${p.discount||0},${p.price},${isCoupon},'${coupMode}')">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div>
           <div style="font-weight:600;font-size:15px;">${p.name}</div>
-          <div style="font-size:12px;color:var(--text-secondary);">${isCoupon ? '优惠券 · 需密码' : '库存: '+p.stock+' · '+p.category}</div>
+          <div style="font-size:12px;color:var(--text-secondary);">${isCoupon ? '优惠券 · 需密码 · ' + (coupMode === 'item' ? '指定单品' : '减总额') : '库存: '+p.stock+' · '+p.category}</div>
         </div>
         <div style="font-size:18px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:6px;">
-          ${isCoupon ? `<span style="color:#d97706;">-¥${finalPrice.toFixed(2)}</span>` : (hasDiscount ? `<span style="text-decoration:line-through;color:var(--text-muted);font-size:13px;font-weight:400;">¥${p.price.toFixed(2)}</span> <span>¥${finalPrice.toFixed(2)}</span>` : `<span>¥${finalPrice.toFixed(2)}</span>`)}
+          ${isCoupon ? `<span style="color:#d97706;">-¥${couponVal}</span>` : (hasDiscount ? `<span style="text-decoration:line-through;color:var(--text-muted);font-size:13px;font-weight:400;">¥${p.price.toFixed(2)}</span> <span>¥${finalPrice.toFixed(2)}</span>` : `<span>¥${finalPrice.toFixed(2)}</span>`)}
           ${discountBadge}${couponBadge}
+        </div>
+      </div>
+    </div>
         </div>
       </div>
     </div>
@@ -207,12 +236,35 @@ function addToCart(id, name, price, optStr, opts) {
 let pendingProduct = null;
 let selectedOptions = {};
 
-function clickProduct(id, name, finalPrice, discount, origPrice, isCoupon) {
+function clickProduct(id, name, finalPrice, discount, origPrice, isCoupon, couponMode) {
   if (isCoupon) {
-    // Password check for coupons
-    const pw = prompt('🎫 请输入优惠券密码：');
-    if (pw !== '102938') { toast('❌ 密码错误'); return; }
-    addToCart(id, name, -finalPrice, '', []);
+    pendingProduct = { id, name, price: finalPrice || 0, couponMode: couponMode || 'total' };
+    if (couponMode === 'item') {
+      // Show item selection modal
+      const itemList = document.getElementById('coupon-item-list');
+      const nonCouponItems = cart.filter(c => c.id !== id);
+      if (nonCouponItems.length === 0) {
+        toast('❌ 购物车中没有可应用的商品');
+        return;
+      }
+      itemList.innerHTML = nonCouponItems.map((c, i) => `
+        <div class="card" style="cursor:pointer;padding:10px;margin-bottom:6px;" onclick="selectCouponItem(${i})" data-idx="${i}">
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-weight:600;">${c.name}</span>
+            <span style="color:var(--primary);">¥${(c.price*c.qty).toFixed(2)}</span>
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary);">¥${c.price.toFixed(2)} × ${c.qty}</div>
+        </div>
+      `).join('');
+      document.getElementById('coupon-item-title').textContent = `🎫 ${name} — 选择目标商品`;
+      document.getElementById('coupon-item-bg').classList.add('active');
+    } else {
+      // Total mode: show password modal
+      document.getElementById('coupon-pw-title').textContent = `🎫 ${name}`;
+      document.getElementById('coupon-pw-input').value = '';
+      document.getElementById('coupon-pw-bg').classList.add('active');
+      setTimeout(() => document.getElementById('coupon-pw-input').focus(), 100);
+    }
     return;
   }
   fetch(`/api/products/${id}/options`).then(r => r.json()).then(opts => {
@@ -269,6 +321,40 @@ function selectOpt(el) {
 function closeOptSelect() {
   document.getElementById('opt-select-bg').classList.remove('active');
   pendingProduct = null;
+}
+
+// ── Coupon Modal Handlers ────
+function closeCouponPw() {
+  document.getElementById('coupon-pw-bg').classList.remove('active');
+  pendingProduct = null;
+}
+function confirmCouponPw() {
+  const pw = document.getElementById('coupon-pw-input').value;
+  if (pw !== '102938') { toast('❌ 密码错误'); return; }
+  document.getElementById('coupon-pw-bg').classList.remove('active');
+  const p = pendingProduct;
+  if (p.couponMode === 'item' && p.targetItem) {
+    addToCart(p.id, p.name + ' → ' + p.targetItem.name, -p.price, p.targetItem.name, []);
+  } else {
+    addToCart(p.id, p.name, -p.price, '', []);
+  }
+  pendingProduct = null;
+}
+function closeCouponItem() {
+  document.getElementById('coupon-item-bg').classList.remove('active');
+  pendingProduct = null;
+}
+function selectCouponItem(idx) {
+  const item = cart[idx];
+  if (!item) return;
+  pendingProduct.price = pendingProduct.price || 0;
+  pendingProduct.targetItem = item;
+  document.getElementById('coupon-item-bg').classList.remove('active');
+  // Now show password
+  document.getElementById('coupon-pw-title').textContent = `🎫 ${pendingProduct.name} → ${item.name}`;
+  document.getElementById('coupon-pw-input').value = '';
+  document.getElementById('coupon-pw-bg').classList.add('active');
+  setTimeout(() => document.getElementById('coupon-pw-input').focus(), 100);
 }
 
 function confirmOptions() {
