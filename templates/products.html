@@ -163,6 +163,7 @@ function updateDiscountInput() {
     if (dt === 'percent') input.max = '100'; else input.removeAttribute('max');
     return;
   }
+  if (dt === 'percent') {
     label.textContent = '折扣百分比';
     input.step = '0.1';
     input.max = '100';
