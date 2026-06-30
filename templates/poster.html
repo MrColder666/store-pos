@@ -263,14 +263,13 @@
       margin: 22px 36px;
       background: linear-gradient(135deg, #fffbeb, #fef3c7);
       border-radius: 22px;
-      padding: 36px 28px;
       border: 2px dashed #f59e0b;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 24px;
       text-align: center;
-      min-height: 400px;
+		padding-bottom: 16px;
+
     }
 
     /* 顶部图标 */
@@ -281,16 +280,7 @@
     }
 
     /* 中间图片：350×350 */
-    .lucky-img {
-      width: 340px;
-      height: 340px;
-      border-radius: 12px;
-      flex-shrink: 0;
-      object-fit: contain;
-      background: #fff;
-      border: 1px solid #f59e0b;
-      padding: 4px;
-    }
+
 
     /* 底部文字 */
     .promo-text {
@@ -353,8 +343,6 @@
         width: 110px;
       }
       .promo {
-        padding: 28px 16px;
-        gap: 18px;
         min-height: auto;
       }
       .lucky-img {
@@ -454,8 +442,7 @@
     <!-- 促销横幅（上下结构：图标在上，图片在中，文字在下） -->
     <div class="promo">
       <span class="wheel-icon">🎰</span>
-      <img src="/static/lucky.png" class="lucky-img" alt="中奖概率分布">
-      <div class="promo-text">
+            <div class="promo-text">
         <h2>幸运大转盘 · 概率透明无套路</h2>
         <p>
           集齐「薯」「片」「好吃」→ 免费领 2 包薯片！<br>
