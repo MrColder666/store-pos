@@ -249,11 +249,14 @@ function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t
 
     const result = pickPrize();
     const sweep = (result.weight/totalWeight)*2*Math.PI;
-    // At rotation=0, sector startAngle=0 is at top. Stop at a random point inside result sector.
-    const stopOffset = -result.startAngle - Math.random()*sweep;
-    const fullSpins = (5+Math.random()*3) * 2 * Math.PI;
-    const currentBase = currentRotation - (currentRotation % (2*Math.PI));
-    const target = currentBase + fullSpins + ((stopOffset % (2*Math.PI)) + 4*Math.PI) % (2*Math.PI);
+    // At rotation rot, sector i is at the pointer (top) when:
+    //   rot - π/2 + startAngle_i = -π/2  →  rot = -startAngle_i (mod 2π)
+    const stopAngle = -result.startAngle - Math.random()*sweep;
+    // Add enough full turns going forward
+    const minTurns = Math.ceil((currentRotation - stopAngle) / (2*Math.PI));
+    const extraTurns = 5 + Math.floor(Math.random()*4);
+    const target = stopAngle + (minTurns + extraTurns) * 2 * Math.PI;
+
     const start = currentRotation, totalDist = target - start;
     const duration = 1800+Math.random()*800;
     const startTime = performance.now();
