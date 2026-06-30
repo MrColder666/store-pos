@@ -49,8 +49,9 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+<audio id="cashierAudio" src="/static/cashier.m4a" preload="auto" style="display:none"></audio>
 
-<div class="version-badge">v2.3.2</div>
+<div class="version-badge">v2.3.3</div>
 
 <!-- Coupon Password Modal -->
 <div class="modal-bg" id="coupon-pw-bg">
@@ -604,8 +605,8 @@ async function confirmPay() {
     }
 
     // Success!
-    // Play cashier sound
-    try { const s=new Audio('/static/cashier.m4a'); s.play().catch(()=>{}); } catch(e){}
+    // Play cashier sound (preloaded audio element)
+    try { var ca=document.getElementById('cashierAudio'); if(ca){ca.currentTime=0;ca.play().catch(function(){})} } catch(e){}
     closePayModal();
     currentPayOrder = { id: orderId, total: data2.total, paid: data2.paid, change: data2.change, method: data2.method };
     showPaySuccess(orderId, data2);
