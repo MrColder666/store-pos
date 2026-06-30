@@ -15,6 +15,7 @@
 <div class="container">
   <button class="btn btn-primary btn-block" onclick="openAdd()">＋ 新增商品</button>
   <div style="margin-top:12px;" id="products-list"></div>
+  <button class="btn btn-accent btn-block" id="btn-save-order" style="display:none;margin-top:8px;" onclick="saveOrder()">💾 保存排序</button>
 </div>
 
 <nav class="tab-bar">
@@ -71,7 +72,7 @@
 </div>
 
 <!-- Toast -->
-<div class="version-badge">v2.3.0</div>
+<div class="version-badge">v2.3.1</div>
 <div class="toast" id="toast"></div>
 
 <!-- Confirm Modal -->
@@ -180,47 +181,9 @@ function updateDiscountInput() {
 async function loadProducts() {
   const res = await fetch('/api/products');
   const products = await res.json();
-  const el = document.getElementById('products-list');
-  el.innerHTML = products.map(p => {
-    const hasDiscount = p.discount > 0;
-    const isFixed = p.discount_type === 'fixed';
-    let finalPrice = p.price;
-    if (hasDiscount) {
-      if (isFixed) {
-        finalPrice = Math.max(0, p.price - p.discount);
-      } else {
-        finalPrice = p.price * (100 - p.discount) / 100;
-      }
-    }
-    const discountBadge = hasDiscount
-      ? (isFixed
-        ? `<span class="discount-badge discount-badge-fixed">-¥${parseFloat(p.discount).toFixed(2)}</span>`
-        : `<span class="discount-badge discount-badge-percent">-${parseFloat(p.discount).toFixed(1)}%</span>`)
-      : '';
-    return `
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:start;">
-        <div>
-          <div style="font-weight:600;font-size:15px;">${p.name}</div>
-          <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
-            ${p.category ? p.category + ' · ' : ''}库存: ${p.stock}
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:18px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
-            ${hasDiscount ? `<span style="text-decoration:line-through;color:var(--text-muted);font-size:13px;font-weight:400;">¥${p.price.toFixed(2)}</span>` : ''}
-            <span>¥${finalPrice.toFixed(2)}</span>
-            ${discountBadge}
-          </div>
-          <div style="margin-top:8px;display:flex;gap:6px;justify-content:end;">
-            <button class="btn btn-sm btn-ghost" onclick="editProduct(${p.id})">编辑</button>
-            <button class="btn btn-sm" style="background:#eef2ff;color:#6366f1;" onclick="manageOptions(${p.id}, '${p.name.replace(/'/g,"\\'")}')">选项</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})">删除</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `}).join('');
+  productOrder = products;
+  if (!window._orderOverride) window._orderOverride = null;
+  renderOrderedProducts();
 }
 
 function openAdd() {
@@ -377,6 +340,40 @@ async function saveOptions() {
 }
 
 loadProducts();
+let productOrder = [];
+
+function moveProduct(idx, dir) {
+  const products = window._orderOverride || productOrder;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= products.length) return;
+  [products[idx], products[newIdx]] = [products[newIdx], products[idx]];
+  window._orderOverride = products;
+  document.getElementById('btn-save-order').style.display = 'block';
+  renderOrderedProducts();
+}
+
+function renderOrderedProducts() {
+  const products = window._orderOverride || productOrder;
+  const el = document.getElementById('products-list');
+  el.innerHTML = products.map((p, i) => {
+    const hasDiscount = p.discount > 0;
+    const isFixed = p.discount_type === 'fixed';
+    let finalPrice = p.price;
+    if (hasDiscount) { if (isFixed) finalPrice = Math.max(0, p.price - p.discount); else finalPrice = p.price * (100 - p.discount) / 100; }
+    const discountBadge = hasDiscount ? (isFixed ? '<span class="discount-badge discount-badge-fixed">-¥'+parseFloat(p.discount).toFixed(2)+'</span>' : '<span class="discount-badge discount-badge-percent">-'+parseFloat(p.discount).toFixed(1)+'%</span>') : '';
+    return '<div class="card" style="display:flex;align-items:start;gap:8px;"><div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;min-width:28px;"><button class="btn btn-sm" style="padding:2px 6px;font-size:10px;line-height:1;" onclick="moveProduct('+i+',-1)" '+(i===0?'disabled':'')+'>▲</button><span style="font-size:14px;color:var(--text-muted);">☰</span><button class="btn btn-sm" style="padding:2px 6px;font-size:10px;line-height:1;" onclick="moveProduct('+i+',1)" '+(i===products.length-1?'disabled':'')+'>▼</button></div><div style="flex:1;"><div style="display:flex;justify-content:space-between;align-items:start;"><div><div style="font-weight:600;font-size:15px;">'+p.name+'</div><div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">'+(p.category?p.category+' · ':'')+'库存: '+p.stock+'</div></div><div style="text-align:right;"><div style="font-size:18px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap;">'+(hasDiscount?'<span style="text-decoration:line-through;color:var(--text-muted);font-size:13px;font-weight:400;">¥'+p.price.toFixed(2)+'</span> ':'')+'<span>¥'+finalPrice.toFixed(2)+'</span>'+discountBadge+'</div><div style="margin-top:8px;display:flex;gap:6px;justify-content:end;"><button class="btn btn-sm btn-ghost" onclick="editProduct('+p.id+')">编辑</button><button class="btn btn-sm" style="background:#eef2ff;color:#6366f1;" onclick="manageOptions('+p.id+',\''+p.name.replace(/\x27/g,'\\\x27')+'\')">选项</button><button class="btn btn-sm btn-danger" onclick="deleteProduct('+p.id+')">删除</button></div></div></div></div></div>';
+  }).join('');
+}
+
+async function saveOrder() {
+  const products = window._orderOverride || productOrder;
+  const ids = products.map(p => p.id);
+  const res = await fetch('/api/products/reorder', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ids}) });
+  const data = await res.json();
+  if (data.ok) { toast('✅ 排序已保存'); document.getElementById('btn-save-order').style.display='none'; window._orderOverride=null; loadProducts(); }
+  else toast('❌ 保存失败');
+}
+
 </script>
 </body>
 </html>

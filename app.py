@@ -46,11 +46,11 @@ def list_products():
     conn = get_db()
     if search:
         rows = conn.execute(
-            "SELECT * FROM products WHERE name LIKE ? ORDER BY id DESC",
+            "SELECT * FROM products WHERE name LIKE ? ORDER BY position ASC, id DESC",
             (f'%{search}%',)
         ).fetchall()
     else:
-        rows = conn.execute("SELECT * FROM products ORDER BY id DESC").fetchall()
+        rows = conn.execute("SELECT * FROM products ORDER BY position ASC, id DESC").fetchall()
     conn.close()
     return jsonify([dict(r) for r in rows])
 
@@ -126,6 +126,20 @@ def update_product(pid):
 def delete_product(pid):
     conn = get_db()
     conn.execute("DELETE FROM products WHERE id=?", (pid,))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True})
+
+
+@app.route('/api/products/reorder', methods=['POST'])
+def reorder_products():
+    """Update product positions from an ordered list of IDs."""
+    data = request.get_json(force=True)
+    ids = data.get('ids', [])
+    if not ids:
+        return jsonify({'error': '空列表'}), 400
+    conn = get_db()
+    for i, pid in enumerate(ids):
+        conn.execute("UPDATE products SET position=? WHERE id=?", (i, int(pid)))
     conn.commit(); conn.close()
     return jsonify({'ok': True})
 
