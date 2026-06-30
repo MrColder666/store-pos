@@ -13,9 +13,9 @@
 canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 50%; box-shadow: 0 8px 24px rgba(99,102,241,0.25), 0 0 0 4px #ede9fe, 0 0 0 8px var(--primary-light); cursor: pointer; background: #faf5ff; }
 .pointer { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); width: 36px; height: 40px; z-index: 10; }
 .pointer::before { content: "▲"; font-size: 44px; line-height: 1; color: var(--danger); display: block; text-shadow: 0 3px 6px rgba(0,0,0,0.3); }
-.spin-btn { margin-top: 14px; background: radial-gradient(circle at 30% 20%, #a78bfa, var(--primary)); border: none; padding: 12px 40px; border-radius: 64px; font-size: 20px; font-weight: 700; color: #fff; box-shadow: 0 6px 0 #5b21b6, 0 8px 20px rgba(124,58,237,0.35); transition: all 0.07s ease; letter-spacing: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.spin-btn { margin-top: 14px; background: radial-gradient(circle at 30% 20%, #a78bfa, var(--primary)); border: none; padding: 12px 40px; border-radius: 64px; font-size: 20px; font-weight: 700; color: #fff; box-shadow: 0 6px 0 #5b21b6, 0 8px 20px rgba(124,58,237,0.35); transition: .07s; letter-spacing: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
 .spin-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #5b21b6; }
-.spin-btn:disabled { opacity: 0.5; transform: translateY(3px); box-shadow: 0 3px 0 #4c1d95; pointer-events: none; }
+.spin-btn:disabled { opacity: .5; transform: translateY(3px); box-shadow: 0 3px 0 #4c1d95; pointer-events: none; }
 .result-toast { margin-top: 10px; min-height: 38px; font-size: 16px; font-weight: 600; color: var(--text); background: var(--primary-soft); padding: 8px 20px; border-radius: 72px; display: flex; align-items: center; justify-content: center; gap: 8px; width: fit-content; max-width: 92%; }
 .info-panel { flex: 1; min-width: 240px; background: var(--surface); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-md); border: 1px solid var(--border-light); display: flex; flex-direction: column; gap: 10px; }
 .section-title { font-size: 15px; font-weight: 700; color: var(--text); border-bottom: 2px dashed var(--primary-soft); padding-bottom: 6px; display: flex; align-items: center; gap: 8px; }
@@ -26,6 +26,9 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
 .slogan-box { background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: var(--radius); padding: 10px 14px; border-left: 4px solid var(--accent); }
 .slogan-box p { font-size: 14px; color: #92400e; font-weight: 600; margin: 0; }
 .slogan-box .tag { font-size: 11px; color: #78350f; margin-top: 2px; }
+.potato-row { display: flex; gap: 4px; font-size: 28px; }
+.potato-dim { opacity: 0.25; }
+.admin-btn { cursor: pointer; color: var(--primary); margin-left: 4px; font-size: 14px; font-weight: 700; }
 .qr-row { display: flex; gap: 10px; margin-top: 6px; }
 .qr-card { flex: 1; text-align: center; background: var(--bg); border-radius: var(--radius-sm); padding: 8px; }
 .qr-card img { width: 80px; height: 80px; border-radius: 6px; border: 2px solid var(--border); }
@@ -55,7 +58,10 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
       </div>
       <div class="slogan-box" style="margin-top:6px;text-align:center;border-left-color:var(--primary);">
         <p>🥔 集齐「薯」「片」「好吃」免费领 2 包薯片！</p>
-        <div class="tag">已兑换 <b id="completeCount">?</b>/3 次（限量）</div>
+        <div class="tag">
+          已兑换 <b id="completeCount">?</b>/3 次（限量）
+          <span class="admin-btn" onclick="openAdmin()" title="管理">＋</span>
+        </div>
       </div>
     </div>
 
@@ -64,13 +70,12 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
       <div class="section-title">📊 中奖概率 <span class="badge-transparent">透明公开</span></div>
       <canvas id="pieChart" width="260" height="200" style="width:100%;max-width:260px;margin:0 auto;display:block;"></canvas>
       <ul class="prob-list" id="probabilityList"></ul>
-      <div class="section-title">🧩 集字有奖 <span class="badge-transparent">薯片好吃</span></div>
-      <div style="display:flex;gap:6px;margin-bottom:6px;">
-        <div id="coll-薯" style="flex:1;text-align:center;background:#f5f3ff;border-radius:8px;padding:6px 0;font-size:22px;opacity:0.3;">🥔</div>
-        <div id="coll-片" style="flex:1;text-align:center;background:#f5f3ff;border-radius:8px;padding:6px 0;font-size:22px;opacity:0.3;">🥔</div>
-        <div id="coll-好吃" style="flex:1;text-align:center;background:#f5f3ff;border-radius:8px;padding:6px 0;font-size:22px;opacity:0.3;">🥔</div>
+      <div class="section-title">🧩 集字有奖</div>
+      <div style="text-align:center;font-size:22px;font-weight:700;color:var(--text);">薯 片 好吃</div>
+      <div class="potato-row" style="justify-content:center;" id="potatoRow">
+        <span>🥔</span><span>🥔</span><span>🥔</span>
       </div>
-      <div style="font-size:11px;color:var(--text-secondary);text-align:center;margin-bottom:8px;">集齐「薯」「片」「好吃」→ 免费领2包薯片！</div>
+      <div style="text-align:center;font-size:12px;color:var(--text-secondary);">集齐「薯」「片」「好吃」→ 免费领2包薯片！</div>
       <div class="section-title">📱 扫码关注</div>
       <div class="qr-row">
         <div class="qr-card">
@@ -90,110 +95,95 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
   <a href="/"><span class="icon">🧾</span>收银</a>
   <a href="/products"><span class="icon">📦</span>商品</a>
   <a href="/orders"><span class="icon">📋</span>订单</a>
-  <a href="/stats"><span class="icon">📊</span>统计</a>
   <a href="/lucky" class="active"><span class="icon">🎰</span>抽奖</a>
+  <a href="/stats"><span class="icon">📊</span>统计</a>
 </nav>
 
 <div class="toast" id="toast"></div>
 <div class="version-badge">v2.3.0</div>
 
+<!-- Admin Modal -->
+<div class="modal-bg" id="admin-bg">
+  <div class="modal" style="text-align:center;max-width:360px;">
+    <h2>🔐 管理员操作</h2>
+    <p style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">
+      当前已兑换 <b id="adminCurrent">0</b>/3 次
+    </p>
+    <div class="btn-row" style="flex-direction:column;gap:8px;">
+      <button class="btn btn-accent btn-block" onclick="adminDecrement()">－ 减少一次（退一个额度）</button>
+      <button class="btn btn-danger btn-block" onclick="adminReset()">🔄 重置进度（回到 3 次）</button>
+    </div>
+    <button class="btn" style="background:#f1f5f9;margin-top:12px;width:100%;" onclick="closeAdmin()">关闭</button>
+  </div>
+</div>
+
+<!-- Password Modal -->
+<div class="modal-bg" id="pw-bg">
+  <div class="modal" style="text-align:center;max-width:360px;">
+    <h2>🔐 管理员密码</h2>
+    <input class="form-input" id="pw-input" type="password" placeholder="请输入密码" style="text-align:center;font-size:18px;margin-bottom:12px;">
+    <div class="btn-row">
+      <button class="btn" style="background:#f1f5f9;" onclick="closePw()">取消</button>
+      <button class="btn btn-primary" onclick="confirmPw()">确认</button>
+    </div>
+  </div>
+</div>
+
 <script>
+function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t.className='toast show'; setTimeout(()=>t.className='toast',2000); }
+
 (function() {
-  // ── Prize data (shuffled to avoid clustering) ──
+  // ── Prize data (shuffled) ──
   const prizeSlots = [
     '薯','谢谢惠顾','片','再抽一次','好吃','谢谢惠顾',
     '免费冰粉一杯','全场9折券','3元代金券','谢谢惠顾',
     '薯','再抽一次','片','谢谢惠顾','3元代金券','再抽一次',
     '全场9折券','谢谢惠顾','3元代金券','谢谢惠顾'
   ];
-  // Fisher-Yates shuffle
   for (let i = prizeSlots.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [prizeSlots[i], prizeSlots[j]] = [prizeSlots[j], prizeSlots[i]];
   }
 
-  // ── Collection tracking (薯片好吃) ──
-  const collectPieces = JSON.parse(localStorage.getItem('lucky_collect') || '{}');
-  function updateCollection(prize) {
-    if (['薯','片','好吃'].includes(prize) && !collectPieces[prize]) {
-      collectPieces[prize] = true;
-      localStorage.setItem('lucky_collect', JSON.stringify(collectPieces));
-    }
-    ['薯','片','好吃'].forEach(p => {
-      const el = document.getElementById('coll-'+p);
-      if (el) el.style.opacity = collectPieces[p] ? '1' : '0.3';
-    });
-    if (collectPieces['薯'] && collectPieces['片'] && collectPieces['好吃']) {
-      setTimeout(() => alert('🎉 恭喜！集齐「薯」「片」「好吃」！\n免费领2包薯片！请到店员处兑换～'), 600);
-    }
-  }
-  updateCollection('');
-
-  // ── Count / probabilities ──
   const countMap = {};
   prizeSlots.forEach(p => countMap[p] = (countMap[p]||0) + 1);
   const total = prizeSlots.length;
   const uniquePrizes = Object.keys(countMap).sort();
 
-  // ── Render probability list ──
-  const probListEl = document.getElementById('probabilityList');
+  // ── Probability list ──
   (function() {
     let html = '';
     uniquePrizes.forEach(name => {
-      const cnt = countMap[name];
-      const pct = ((cnt/total)*100).toFixed(0);
-      html += `<li><span>${name}</span><span class="prob-value">${pct}%</span></li>`;
+      html += `<li><span>${name}</span><span class="prob-value">${Math.round(countMap[name]/total*100)}%</span></li>`;
     });
-    probListEl.innerHTML = html;
+    document.getElementById('probabilityList').innerHTML = html;
   })();
 
-  // ── Draw pie chart ──
+  // ── Pie chart ──
   (function() {
     const pc = document.getElementById('pieChart');
     const pctx = pc.getContext('2d');
-    const pw = pc.width, ph = pc.height;
-    const pr = Math.min(pw, ph) / 2 - 20;
-    const px = pw/2, py = ph/2;
+    const pw=pc.width, ph=pc.height, pr=Math.min(pw,ph)/2-20, px=pw/2, py=ph/2;
     const colors = ['#7c3aed','#a78bfa','#c4b5fd','#ddd6fe','#ede9fe','#f59e0b','#fbbf24','#fcd34d'];
-    let startAngle = -Math.PI/2;
-    uniquePrizes.forEach((name, i) => {
-      const pct = countMap[name] / total;
-      const endAngle = startAngle + pct * Math.PI * 2;
-      pctx.beginPath();
-      pctx.moveTo(px, py);
-      pctx.arc(px, py, pr, startAngle, endAngle);
-      pctx.closePath();
-      pctx.fillStyle = colors[i % colors.length];
-      pctx.fill();
-      pctx.strokeStyle = '#fff';
-      pctx.lineWidth = 2;
-      pctx.stroke();
-      // Label on slice
-      const mid = startAngle + (endAngle - startAngle)/2;
-      const lx = px + Math.cos(mid) * pr * 0.65;
-      const ly = py + Math.sin(mid) * pr * 0.65;
-      pctx.fillStyle = '#1e1b4b';
-      pctx.font = 'bold 11px sans-serif';
-      pctx.textAlign = 'center';
-      pctx.fillText(Math.round(pct*100)+'%', lx, ly);
-      startAngle = endAngle;
+    let sa = -Math.PI/2;
+    uniquePrizes.forEach((name,i) => {
+      const pct = countMap[name]/total, ea = sa+pct*Math.PI*2;
+      pctx.beginPath(); pctx.moveTo(px,py); pctx.arc(px,py,pr,sa,ea); pctx.closePath();
+      pctx.fillStyle = colors[i%colors.length]; pctx.fill();
+      pctx.strokeStyle = '#fff'; pctx.lineWidth = 2; pctx.stroke();
+      const mid = sa + (ea-sa)/2;
+      pctx.fillStyle = '#1e1b4b'; pctx.font = 'bold 11px sans-serif'; pctx.textAlign = 'center';
+      pctx.fillText(Math.round(pct*100)+'%', px+Math.cos(mid)*pr*0.65, py+Math.sin(mid)*pr*0.65);
+      sa = ea;
     });
-    // Center hole (donut style)
-    pctx.beginPath();
-    pctx.arc(px, py, pr*0.45, 0, Math.PI*2);
-    pctx.fillStyle = '#fff';
-    pctx.fill();
-    pctx.fillStyle = '#1e1b4b';
-    pctx.font = 'bold 16px sans-serif';
-    pctx.textAlign = 'center';
-    pctx.fillText('概率', px, py+2);
+    pctx.beginPath(); pctx.arc(px,py,pr*0.45,0,Math.PI*2); pctx.fillStyle='#fff'; pctx.fill();
+    pctx.fillStyle='#1e1b4b'; pctx.font='bold 16px sans-serif'; pctx.textAlign='center'; pctx.fillText('概率',px,py+2);
   })();
 
   // ── Canvas wheel ──
   const canvas = document.getElementById('wheelCanvas');
   const ctx = canvas.getContext('2d');
-  const W = 560, H = 560;
-  const cx = W/2, cy = H/2, radius = 255;
+  const W=560, H=560, cx=W/2, cy=H/2, radius=255;
   const wheelColors = [
     '#7c3aed','#a78bfa','#8b5cf6','#c4b5fd','#6d28d9','#ddd6fe',
     '#9333ea','#a855f7','#7e22ce','#c084fc','#581c87','#d8b4fe',
@@ -206,23 +196,30 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
     ctx.clearRect(0, 0, W, H);
     const sliceAngle = (Math.PI*2) / prizeSlots.length;
     for (let i = 0; i < prizeSlots.length; i++) {
-      const sa = rot + i * sliceAngle;
-      const ea = sa + sliceAngle;
+      const sa = rot + i * sliceAngle, ea = sa + sliceAngle;
       ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,radius,sa,ea); ctx.closePath();
-      ctx.fillStyle = wheelColors[i % wheelColors.length];
-      ctx.fill();
+      ctx.fillStyle = wheelColors[i % wheelColors.length]; ctx.fill();
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+
       const mid = sa + sliceAngle/2;
-      const x = cx + Math.cos(mid) * radius * 0.68;
-      const y = cy + Math.sin(mid) * radius * 0.68;
+      const textR = radius * 0.7;
+      const x = cx + Math.cos(mid) * textR;
+      const y = cy + Math.sin(mid) * textR;
       let label = prizeSlots[i];
       if (label.includes('3元代金券')) label = '3元券';
       else if (label.includes('全场9折')) label = '9折券';
       else if (label.includes('免费冰粉')) label = '冰粉';
-      ctx.save(); ctx.translate(x, y);
-      ctx.rotate(mid + Math.PI/2);
+
+      ctx.save();
+      ctx.translate(x, y);
+      // Rotate text so it ALWAYS reads radially outward (top-to-bottom for top, etc.)
+      // mid points from center to slice center. Text should align with that radial direction.
+      const textAngle = mid + Math.PI/2; // rotate 90° so text is perpendicular to radius
+      ctx.rotate(textAngle);
       ctx.font = 'bold 22px "PingFang SC",sans-serif';
-      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 4;
       ctx.fillText(label, 0, 0);
       ctx.restore();
@@ -251,30 +248,26 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
 
   function spinWheel() {
     if (isSpinning) return;
-    isSpinning = true;
-    spinBtn.disabled = true;
+    isSpinning = true; spinBtn.disabled = true;
     resultDisplay.innerHTML = '🎰 转动中...';
-    const extra = 5 + Math.random()*3;
+    const extra = 5+Math.random()*3;
     const target = currentRotation + extra*2*Math.PI + Math.random()*2*Math.PI;
-    const start = currentRotation, total = target - start;
-    const duration = 1800 + Math.random()*800;
+    const start = currentRotation, totalDist = target-start;
+    const duration = 1800+Math.random()*800;
     const startTime = performance.now();
 
     function anim(time) {
       const p = Math.min((time-startTime)/duration, 1);
-      const eased = 1 - Math.pow(1-p, 3);
-      const rot = start + total * eased;
+      const eased = 1-Math.pow(1-p,3);
+      const rot = start + totalDist*eased;
       drawWheel(rot);
       currentRotation = rot;
-      if (p < 1) { requestAnimationFrame(anim); }
-      else {
-        drawWheel(currentRotation);
-        const prize = getPrize(currentRotation);
-        const emojis = { '薯':'🥔','片':'🥔','好吃':'🥔','免费冰粉一杯':'🍧','3元代金券':'🧾','再抽一次':'🔄','全场9折券':'🏷️','谢谢惠顾':'😅' };
-        resultDisplay.innerHTML = `${emojis[prize]||'🎉'} 恭喜：${prize}`;
-        updateCollection(prize);
-        isSpinning = false; spinBtn.disabled = false;
-      }
+      if (p < 1) { requestAnimationFrame(anim); return; }
+      drawWheel(currentRotation);
+      const prize = getPrize(currentRotation);
+      const emojis = {'薯':'🥔','片':'🥔','好吃':'🥔','免费冰粉一杯':'🍧','3元代金券':'🧾','再抽一次':'🔄','全场9折券':'🏷️','谢谢惠顾':'😅'};
+      resultDisplay.innerHTML = `${emojis[prize]||'🎉'} 恭喜：${prize}`;
+      isSpinning = false; spinBtn.disabled = false;
     }
     requestAnimationFrame(anim);
   }
@@ -283,11 +276,62 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
   canvas.addEventListener('click', spinWheel);
   canvas.addEventListener('touchstart', e => { e.preventDefault(); spinWheel(); });
 
-  // Load completion count
-  fetch('/api/lucky/count').then(r => r.json()).then(d => {
-    document.getElementById('completeCount').textContent = d.count;
-  });
+  // ── Load completion count ──
+  function loadCount() {
+    fetch('/api/lucky/count').then(r=>r.json()).then(d => {
+      document.getElementById('completeCount').textContent = d.count;
+      document.getElementById('adminCurrent').textContent = d.count;
+      // Update potatoes: 3 - count are bright, count are dim
+      const potatoes = document.getElementById('potatoRow').children;
+      for (let i = 0; i < 3; i++) {
+        potatoes[i].className = i < d.count ? 'potato-dim' : '';
+      }
+    });
+  }
+  loadCount();
 })();
+
+// ── Admin flow ──
+function openAdmin() {
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-bg').classList.add('active');
+  setTimeout(() => document.getElementById('pw-input').focus(), 100);
+}
+function closePw() { document.getElementById('pw-bg').classList.remove('active'); }
+function closeAdmin() { document.getElementById('admin-bg').classList.remove('active'); }
+
+function confirmPw() {
+  if (document.getElementById('pw-input').value !== '102938') { toast('❌ 密码错误'); return; }
+  document.getElementById('pw-bg').classList.remove('active');
+  document.getElementById('admin-bg').classList.add('active');
+}
+
+async function adminDecrement() {
+  const res = await fetch('/api/lucky/decrement', { method: 'POST' });
+  const d = await res.json();
+  if (d.error) { toast('❌ ' + d.error); } else { toast('✅ 已减少，剩余 ' + (3-d.count) + ' 次'); }
+  closeAdmin();
+  // Reload count
+  fetch('/api/lucky/count').then(r=>r.json()).then(d => {
+    document.getElementById('completeCount').textContent = d.count;
+    document.getElementById('adminCurrent').textContent = d.count;
+    const potatoes = document.getElementById('potatoRow').children;
+    for (let i = 0; i < 3; i++) potatoes[i].className = i < d.count ? 'potato-dim' : '';
+  });
+}
+
+async function adminReset() {
+  const res = await fetch('/api/lucky/reset', { method: 'POST' });
+  const d = await res.json();
+  if (d.ok) { toast('✅ 已重置为 3 次'); }
+  closeAdmin();
+  fetch('/api/lucky/count').then(r=>r.json()).then(d => {
+    document.getElementById('completeCount').textContent = d.count;
+    document.getElementById('adminCurrent').textContent = d.count;
+    const potatoes = document.getElementById('potatoRow').children;
+    for (let i = 0; i < 3; i++) potatoes[i].className = i < d.count ? 'potato-dim' : '';
+  });
+}
 </script>
 </body>
 </html>

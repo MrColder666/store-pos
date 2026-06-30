@@ -863,17 +863,18 @@ def weekly_chart_png():
 
 
 # ─── Lucky Wheel ───────────────────────────────────────────────
-LUCKY_COUNT_FILE = os.path.join(os.path.dirname(__file__), 'lucky_count.json')
+def _get_lucky_count():
+    conn = get_db()
+    cur = conn.execute("SELECT value FROM config WHERE key='lucky_count'")
+    row = cur.fetchone()
+    conn.close()
+    return int(row['value']) if row else 0
 
-def _read_lucky_count():
-    if os.path.exists(LUCKY_COUNT_FILE):
-        with open(LUCKY_COUNT_FILE) as f:
-            return json.loads(f.read()).get('count', 0)
-    return 0
-
-def _write_lucky_count(count):
-    with open(LUCKY_COUNT_FILE, 'w') as f:
-        json.dump({'count': count}, f)
+def _set_lucky_count(count):
+    conn = get_db()
+    conn.execute("INSERT OR REPLACE INTO config (key, value) VALUES ('lucky_count', ?)", (str(count),))
+    conn.commit()
+    conn.close()
 
 @app.route('/lucky')
 def lucky_page():
@@ -881,16 +882,30 @@ def lucky_page():
 
 @app.route('/api/lucky/count')
 def lucky_count():
-    return jsonify({'count': _read_lucky_count(), 'max': 3})
+    return jsonify({'count': _get_lucky_count(), 'max': 3})
 
 @app.route('/api/lucky/complete', methods=['POST'])
 def lucky_complete():
-    current = _read_lucky_count()
+    current = _get_lucky_count()
     if current >= 3:
         return jsonify({'error': '兑换已达上限（3次）'}), 400
     current += 1
-    _write_lucky_count(current)
+    _set_lucky_count(current)
     return jsonify({'ok': True, 'count': current})
+
+@app.route('/api/lucky/decrement', methods=['POST'])
+def lucky_decrement():
+    current = _get_lucky_count()
+    if current <= 0:
+        return jsonify({'error': '当前没有兑换记录'}), 400
+    current -= 1
+    _set_lucky_count(current)
+    return jsonify({'ok': True, 'count': current})
+
+@app.route('/api/lucky/reset', methods=['POST'])
+def lucky_reset():
+    _set_lucky_count(0)
+    return jsonify({'ok': True, 'count': 0})
 
 
 if __name__ == '__main__':

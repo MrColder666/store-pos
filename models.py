@@ -88,6 +88,14 @@ def init_db():
     except (sqlite3.OperationalError, sqlite3.IntegrityError):
         pass
 
+    # ── v2.3 Migration: config table ────
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS config (
+            key TEXT PRIMARY KEY,
+            value TEXT DEFAULT ''
+        )
+    """)
+
     # ── v2.2 Migration: multi_select on product_options ──────
     try:
         conn.execute("ALTER TABLE product_options ADD COLUMN multi_select INTEGER DEFAULT 0")
