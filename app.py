@@ -896,8 +896,8 @@ def lucky_complete():
 @app.route('/api/lucky/decrement', methods=['POST'])
 def lucky_decrement():
     current = _get_lucky_count()
-    if current > 0:
-        current -= 1
+    if current < 3:
+        current += 1
         _set_lucky_count(current)
     return jsonify({'ok': True, 'count': current})
 
