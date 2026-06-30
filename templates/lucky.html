@@ -356,5 +356,8 @@ function confirmPw() { if (document.getElementById('pw-input').value!=='102938')
 async function adminDecrement() { const r=await fetch('/api/lucky/decrement',{method:'POST'}); const d=await r.json(); toast('✅ 已减少，剩余 '+(3-d.count)+' 次'); closeAdmin(); fetch('/api/lucky/count').then(r=>r.json()).then(d=>{document.getElementById('completeCount').textContent=d.count;document.getElementById('adminCurrent').textContent=d.count;const p=document.getElementById('potatoRow').children;for(let i=0;i<3;i++)p[i].className=i<d.count?'potato-dim':'';}); }
 async function adminReset() { await fetch('/api/lucky/reset',{method:'POST'}); toast('✅ 已重置为 3 次'); closeAdmin(); fetch('/api/lucky/count').then(r=>r.json()).then(d=>{document.getElementById('completeCount').textContent=d.count;document.getElementById('adminCurrent').textContent=d.count;const p=document.getElementById('potatoRow').children;for(let i=0;i<3;i++)p[i].className=i<d.count?'potato-dim':'';}); }
 </script>
+<script>
+(function(){document.body.addEventListener('click',function(e){var t=e.target.closest('button');if(!t||t.disabled)return;try{var a=new(window.AudioContext||window.webkitAudioContext)();var o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=800;g.gain.setValueAtTime(0.03,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+0.04);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+0.04)}catch(e){}})})();
+</script>
 </body>
 </html>
