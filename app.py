@@ -862,6 +862,37 @@ def weekly_chart_png():
                     headers={'Content-Disposition': 'inline; filename=weekly_revenue.png'})
 
 
+# ─── Lucky Wheel ───────────────────────────────────────────────
+LUCKY_COUNT_FILE = os.path.join(os.path.dirname(__file__), 'lucky_count.json')
+
+def _read_lucky_count():
+    if os.path.exists(LUCKY_COUNT_FILE):
+        with open(LUCKY_COUNT_FILE) as f:
+            return json.loads(f.read()).get('count', 0)
+    return 0
+
+def _write_lucky_count(count):
+    with open(LUCKY_COUNT_FILE, 'w') as f:
+        json.dump({'count': count}, f)
+
+@app.route('/lucky')
+def lucky_page():
+    return render_template('lucky.html')
+
+@app.route('/api/lucky/count')
+def lucky_count():
+    return jsonify({'count': _read_lucky_count(), 'max': 3})
+
+@app.route('/api/lucky/complete', methods=['POST'])
+def lucky_complete():
+    current = _read_lucky_count()
+    if current >= 3:
+        return jsonify({'error': '兑换已达上限（3次）'}), 400
+    current += 1
+    _write_lucky_count(current)
+    return jsonify({'ok': True, 'count': current})
+
+
 if __name__ == '__main__':
     init_db()
     app.run(host='127.0.0.1', port=5000, debug=False)
