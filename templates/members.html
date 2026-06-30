@@ -52,7 +52,6 @@ async function loadMembers(){
 }
 
 async function deleteMember(id){
-  if(!window.confirm('确定删除该会员？'))return;
   await fetch('/api/members/'+id+'/delete',{method:'POST'});
   toast('已删除');loadMembers();
 }
