@@ -309,7 +309,7 @@ function confirmPw() {
 async function adminDecrement() {
   const res = await fetch('/api/lucky/decrement', { method: 'POST' });
   const d = await res.json();
-  if (d.error) { toast('❌ ' + d.error); } else { toast('✅ 已减少，剩余 ' + (3-d.count) + ' 次'); }
+  toast('✅ 已减少，剩余 ' + (3-d.count) + ' 次');
   closeAdmin();
   // Reload count
   fetch('/api/lucky/count').then(r=>r.json()).then(d => {
