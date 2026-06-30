@@ -9,7 +9,7 @@
 .lucky-container { max-width: 800px; margin: 0 auto; padding: 12px 16px; }
 .row-main { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 8px; }
 .wheel-area { flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; }
-.wheel-wrapper { position: relative; width: 280px; height: 280px; margin: 0 auto; }
+.wheel-wrapper { position: relative; width: 300px; height: 300px; margin: 0 auto; }
 canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 50%; box-shadow: 0 8px 24px rgba(99,102,241,0.25), 0 0 0 4px #ede9fe, 0 0 0 8px var(--primary-light); cursor: pointer; background: #faf5ff; }
 .pointer { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); width: 36px; height: 40px; z-index: 10; }
 .pointer::before { content: "▲"; font-size: 44px; line-height: 1; color: var(--danger); display: block; text-shadow: 0 3px 6px rgba(0,0,0,0.3); }
@@ -33,7 +33,7 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
 .qr-card { flex: 1; text-align: center; background: var(--bg); border-radius: var(--radius-sm); padding: 8px; }
 .qr-card img { width: 80px; height: 80px; border-radius: 6px; border: 2px solid var(--border); }
 .qr-card .label { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
-@media (max-width: 640px) { .row-main { flex-direction: column; } .wheel-wrapper { width: 240px; height: 240px; } }
+@media (max-width: 640px) { .row-main { flex-direction: column; } .wheel-wrapper { width: 260px; height: 260px; } }
 </style>
 </head>
 <body>
@@ -48,7 +48,7 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
     <div class="wheel-area">
       <div class="wheel-wrapper">
         <div class="pointer"></div>
-        <canvas id="wheelCanvas" width="560" height="560"></canvas>
+        <canvas id="wheelCanvas" width="600" height="600"></canvas>
       </div>
       <button class="spin-btn" id="spinButton">🎯 抽奖</button>
       <div class="result-toast" id="resultDisplay">👆 点击转盘或按钮开始</div>
@@ -100,15 +100,13 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
 </nav>
 
 <div class="toast" id="toast"></div>
-<div class="version-badge">v2.3.1</div>
+<div class="version-badge">v2.3.2</div>
 
 <!-- Admin Modal -->
 <div class="modal-bg" id="admin-bg">
   <div class="modal" style="text-align:center;max-width:360px;">
     <h2>🔐 管理员操作</h2>
-    <p style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">
-      当前已兑换 <b id="adminCurrent">0</b>/3 次
-    </p>
+    <p style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">当前已兑换 <b id="adminCurrent">0</b>/3 次</p>
     <div class="btn-row" style="flex-direction:column;gap:8px;">
       <button class="btn btn-accent btn-block" onclick="adminDecrement()">－ 减少一次（退一个额度）</button>
       <button class="btn btn-danger btn-block" onclick="adminReset()">🔄 重置进度（回到 3 次）</button>
@@ -133,99 +131,102 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
 function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t.className='toast show'; setTimeout(()=>t.className='toast',2000); }
 
 (function() {
-  // ── Prize data (shuffled) ──
-  const prizeSlots = [
-    '薯','谢谢惠顾','片','再抽一次','好吃','谢谢惠顾',
-    '免费冰粉一杯','全场9折券','3元代金券','谢谢惠顾',
-    '薯','再抽一次','片','谢谢惠顾','3元代金券','再抽一次',
-    '全场9折券','谢谢惠顾','3元代金券','谢谢惠顾'
+  // ── Merged prize sectors (proportional to probability) ──
+  const sectors = [
+    { name:'谢谢惠顾', weight:30, color:'#a78bfa', emoji:'😅' },
+    { name:'3元代金券', weight:15, color:'#f59e0b', emoji:'🧾' },
+    { name:'再抽一次', weight:15, color:'#34d399', emoji:'🔄' },
+    { name:'薯', weight:10, color:'#fbbf24', emoji:'🥔' },
+    { name:'片', weight:10, color:'#f472b6', emoji:'🥔' },
+    { name:'全场9折券', weight:10, color:'#60a5fa', emoji:'🏷️' },
+    { name:'免费冰粉一杯', weight:5, color:'#fb923c', emoji:'🍧' },
+    { name:'好吃', weight:5, color:'#e879f9', emoji:'🥔' },
   ];
-  for (let i = prizeSlots.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [prizeSlots[i], prizeSlots[j]] = [prizeSlots[j], prizeSlots[i]];
-  }
-
-  const countMap = {};
-  prizeSlots.forEach(p => countMap[p] = (countMap[p]||0) + 1);
-  const total = prizeSlots.length;
-  const uniquePrizes = Object.keys(countMap).sort();
+  const totalWeight = sectors.reduce((s,p) => s+p.weight, 0);
+  // Build cumulative angles for spinning
+  let cumulative = 0;
+  sectors.forEach(s => { s.startAngle = cumulative; cumulative += (s.weight/totalWeight)*2*Math.PI; s.endAngle = cumulative; });
 
   // ── Probability list ──
-  (function() {
-    let html = '';
-    uniquePrizes.forEach(name => {
-      html += `<li><span>${name}</span><span class="prob-value">${Math.round(countMap[name]/total*100)}%</span></li>`;
+  (function(){
+    let html='';
+    sectors.forEach(s => {
+      html += `<li><span>${s.emoji} ${s.name}</span><span class="prob-value">${s.weight}%</span></li>`;
     });
     document.getElementById('probabilityList').innerHTML = html;
   })();
 
-  // ── Pie chart ──
-  (function() {
+  // ── Pie chart (same as wheel, smaller) ──
+  (function(){
     const pc = document.getElementById('pieChart');
     const pctx = pc.getContext('2d');
     const pw=pc.width, ph=pc.height, pr=Math.min(pw,ph)/2-20, px=pw/2, py=ph/2;
-    const colors = ['#7c3aed','#a78bfa','#c4b5fd','#ddd6fe','#ede9fe','#f59e0b','#fbbf24','#fcd34d'];
     let sa = -Math.PI/2;
-    uniquePrizes.forEach((name,i) => {
-      const pct = countMap[name]/total, ea = sa+pct*Math.PI*2;
+    sectors.forEach(s => {
+      const ea = sa + (s.weight/totalWeight)*2*Math.PI;
       pctx.beginPath(); pctx.moveTo(px,py); pctx.arc(px,py,pr,sa,ea); pctx.closePath();
-      pctx.fillStyle = colors[i%colors.length]; pctx.fill();
+      pctx.fillStyle = s.color; pctx.fill();
       pctx.strokeStyle = '#fff'; pctx.lineWidth = 2; pctx.stroke();
       const mid = sa + (ea-sa)/2;
-      pctx.fillStyle = '#1e1b4b'; pctx.font = 'bold 11px sans-serif'; pctx.textAlign = 'center';
-      pctx.fillText(Math.round(pct*100)+'%', px+Math.cos(mid)*pr*0.65, py+Math.sin(mid)*pr*0.65);
+      pctx.fillStyle = '#1e1b4b'; pctx.font = 'bold 10px sans-serif'; pctx.textAlign = 'center';
+      pctx.fillText(s.weight+'%', px+Math.cos(mid)*pr*0.6, py+Math.sin(mid)*pr*0.6);
       sa = ea;
     });
     pctx.beginPath(); pctx.arc(px,py,pr*0.45,0,Math.PI*2); pctx.fillStyle='#fff'; pctx.fill();
-    pctx.fillStyle='#1e1b4b'; pctx.font='bold 16px sans-serif'; pctx.textAlign='center'; pctx.fillText('概率',px,py+2);
   })();
 
   // ── Canvas wheel ──
   const canvas = document.getElementById('wheelCanvas');
   const ctx = canvas.getContext('2d');
-  const W=560, H=560, cx=W/2, cy=H/2, radius=255;
-  const wheelColors = [
-    '#7c3aed','#a78bfa','#8b5cf6','#c4b5fd','#6d28d9','#ddd6fe',
-    '#9333ea','#a855f7','#7e22ce','#c084fc','#581c87','#d8b4fe',
-    '#6b21a8','#9d4edd','#5b21b6','#b57bee','#4c1d95','#8f5df6',
-    '#3b0764','#af7bee'
-  ];
+  const W=600, H=600, cx=W/2, cy=H/2, radius=270;
   let currentRotation = 0, isSpinning = false;
 
   function drawWheel(rot) {
     ctx.clearRect(0, 0, W, H);
-    const sliceAngle = (Math.PI*2) / prizeSlots.length;
-    for (let i = 0; i < prizeSlots.length; i++) {
-      const sa = rot + i * sliceAngle, ea = sa + sliceAngle;
+    let sa = rot - Math.PI/2; // start from top
+    sectors.forEach(s => {
+      const sweep = (s.weight/totalWeight) * 2 * Math.PI;
+      const ea = sa + sweep;
+      // Draw sector
       ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,radius,sa,ea); ctx.closePath();
-      ctx.fillStyle = wheelColors[i % wheelColors.length]; ctx.fill();
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = s.color; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke();
 
-      const mid = sa + sliceAngle/2;
-      const textR = radius * 0.7;
-      const x = cx + Math.cos(mid) * textR;
-      const y = cy + Math.sin(mid) * textR;
-      let label = prizeSlots[i];
-      if (label.includes('3元代金券')) label = '3元券';
-      else if (label.includes('全场9折')) label = '9折券';
-      else if (label.includes('免费冰粉')) label = '冰粉';
+      // Draw vertical text (center-outward, characters stacked)
+      const mid = sa + sweep/2;
+      const textR = radius * 0.62;
+      const tx = cx + Math.cos(mid) * textR;
+      const ty = cy + Math.sin(mid) * textR;
 
       ctx.save();
-      ctx.translate(x, y);
-      // Rotate text so it ALWAYS reads radially outward (top-to-bottom for top, etc.)
-      // mid points from center to slice center. Text should align with that radial direction.
-      const textAngle = mid + Math.PI/2; // rotate 90° so text is perpendicular to radius
-      ctx.rotate(textAngle);
-      ctx.font = 'bold 22px "PingFang SC",sans-serif';
-      ctx.fillStyle = '#fff';
+      ctx.translate(tx, ty);
+      // Rotate so text reads along the radial direction
+      ctx.rotate(mid + Math.PI/2);
+      ctx.fillStyle = '#1e1b4b';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 4;
-      ctx.fillText(label, 0, 0);
+
+      // For wider sectors, use larger font; for narrow, smaller
+      const fontSize = sweep > 0.25 ? 20 : sweep > 0.15 ? 15 : 12;
+      ctx.font = `bold ${fontSize}px "PingFang SC",sans-serif`;
+
+      // Draw text vertically — one character per line if it fits better
+      let label = s.name;
+      if (label.length > 3 && sweep < 0.3) {
+        // Split into two lines
+        const mid = Math.ceil(label.length/2);
+        ctx.font = `bold 13px "PingFang SC",sans-serif`;
+        ctx.fillText(label.slice(0,mid), 0, -9);
+        ctx.fillText(label.slice(mid), 0, 9);
+      } else {
+        ctx.fillText(label, 0, 0);
+      }
       ctx.restore();
-    }
-    // Center
-    ctx.beginPath(); ctx.arc(cx,cy,44,0,Math.PI*2);
+
+      sa = ea;
+    });
+    // Center button
+    ctx.beginPath(); ctx.arc(cx,cy,48,0,Math.PI*2);
     ctx.fillStyle = '#ede9fe'; ctx.shadowBlur = 12; ctx.shadowColor = '#7c3aed';
     ctx.fill(); ctx.shadowBlur = 0;
     ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 4; ctx.stroke();
@@ -234,25 +235,31 @@ function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t
   }
   drawWheel(currentRotation);
 
-  // ── Spin logic ──
+  // ── Spin logic (weighted random) ──
   const spinBtn = document.getElementById('spinButton');
   const resultDisplay = document.getElementById('resultDisplay');
 
-  function getPrize(angle) {
-    const sliceAngle = (Math.PI*2) / prizeSlots.length;
-    const pointerAngle = -Math.PI/2;
-    let diff = (pointerAngle - angle) % (Math.PI*2);
-    if (diff < 0) diff += Math.PI*2;
-    return prizeSlots[Math.floor(diff / sliceAngle) % prizeSlots.length];
+  function pickPrize() {
+    let r = Math.random() * totalWeight;
+    for (let s of sectors) {
+      r -= s.weight;
+      if (r <= 0) return s;
+    }
+    return sectors[sectors.length-1];
   }
 
   function spinWheel() {
     if (isSpinning) return;
     isSpinning = true; spinBtn.disabled = true;
     resultDisplay.innerHTML = '🎰 转动中...';
-    const extra = 5+Math.random()*3;
-    const target = currentRotation + extra*2*Math.PI + Math.random()*2*Math.PI;
-    const start = currentRotation, totalDist = target-start;
+
+    const result = pickPrize();
+    // Random position within the result sector
+    const sweep = (result.weight/totalWeight)*2*Math.PI;
+    const targetAngle = -result.startAngle - Math.PI/2 - Math.random()*sweep;
+    const totalTurns = 5 + Math.random()*3;
+    const target = currentRotation + totalTurns*2*Math.PI + (targetAngle - (currentRotation % (2*Math.PI)) + 4*Math.PI) % (2*Math.PI);
+    const start = currentRotation, totalDist = target - start;
     const duration = 1800+Math.random()*800;
     const startTime = performance.now();
 
@@ -264,9 +271,7 @@ function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t
       currentRotation = rot;
       if (p < 1) { requestAnimationFrame(anim); return; }
       drawWheel(currentRotation);
-      const prize = getPrize(currentRotation);
-      const emojis = {'薯':'🥔','片':'🥔','好吃':'🥔','免费冰粉一杯':'🍧','3元代金券':'🧾','再抽一次':'🔄','全场9折券':'🏷️','谢谢惠顾':'😅'};
-      resultDisplay.innerHTML = `${emojis[prize]||'🎉'} 恭喜：${prize}`;
+      resultDisplay.innerHTML = `${result.emoji} 恭喜：${result.name}`;
       isSpinning = false; spinBtn.disabled = false;
     }
     requestAnimationFrame(anim);
@@ -276,62 +281,25 @@ function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t
   canvas.addEventListener('click', spinWheel);
   canvas.addEventListener('touchstart', e => { e.preventDefault(); spinWheel(); });
 
-  // ── Load completion count ──
+  // ── Load count ──
   function loadCount() {
     fetch('/api/lucky/count').then(r=>r.json()).then(d => {
       document.getElementById('completeCount').textContent = d.count;
       document.getElementById('adminCurrent').textContent = d.count;
-      // Update potatoes: 3 - count are bright, count are dim
       const potatoes = document.getElementById('potatoRow').children;
-      for (let i = 0; i < 3; i++) {
-        potatoes[i].className = i < d.count ? 'potato-dim' : '';
-      }
+      for (let i = 0; i < 3; i++) potatoes[i].className = i < d.count ? 'potato-dim' : '';
     });
   }
   loadCount();
 })();
 
 // ── Admin flow ──
-function openAdmin() {
-  document.getElementById('pw-input').value = '';
-  document.getElementById('pw-bg').classList.add('active');
-  setTimeout(() => document.getElementById('pw-input').focus(), 100);
-}
+function openAdmin() { document.getElementById('pw-input').value=''; document.getElementById('pw-bg').classList.add('active'); setTimeout(()=>document.getElementById('pw-input').focus(),100); }
 function closePw() { document.getElementById('pw-bg').classList.remove('active'); }
 function closeAdmin() { document.getElementById('admin-bg').classList.remove('active'); }
-
-function confirmPw() {
-  if (document.getElementById('pw-input').value !== '102938') { toast('❌ 密码错误'); return; }
-  document.getElementById('pw-bg').classList.remove('active');
-  document.getElementById('admin-bg').classList.add('active');
-}
-
-async function adminDecrement() {
-  const res = await fetch('/api/lucky/decrement', { method: 'POST' });
-  const d = await res.json();
-  toast('✅ 已减少，剩余 ' + (3-d.count) + ' 次');
-  closeAdmin();
-  // Reload count
-  fetch('/api/lucky/count').then(r=>r.json()).then(d => {
-    document.getElementById('completeCount').textContent = d.count;
-    document.getElementById('adminCurrent').textContent = d.count;
-    const potatoes = document.getElementById('potatoRow').children;
-    for (let i = 0; i < 3; i++) potatoes[i].className = i < d.count ? 'potato-dim' : '';
-  });
-}
-
-async function adminReset() {
-  const res = await fetch('/api/lucky/reset', { method: 'POST' });
-  const d = await res.json();
-  if (d.ok) { toast('✅ 已重置为 3 次'); }
-  closeAdmin();
-  fetch('/api/lucky/count').then(r=>r.json()).then(d => {
-    document.getElementById('completeCount').textContent = d.count;
-    document.getElementById('adminCurrent').textContent = d.count;
-    const potatoes = document.getElementById('potatoRow').children;
-    for (let i = 0; i < 3; i++) potatoes[i].className = i < d.count ? 'potato-dim' : '';
-  });
-}
+function confirmPw() { if (document.getElementById('pw-input').value!=='102938') { toast('❌ 密码错误'); return; } document.getElementById('pw-bg').classList.remove('active'); document.getElementById('admin-bg').classList.add('active'); }
+async function adminDecrement() { const r=await fetch('/api/lucky/decrement',{method:'POST'}); const d=await r.json(); toast('✅ 已减少，剩余 '+(3-d.count)+' 次'); closeAdmin(); fetch('/api/lucky/count').then(r=>r.json()).then(d=>{document.getElementById('completeCount').textContent=d.count;document.getElementById('adminCurrent').textContent=d.count;const p=document.getElementById('potatoRow').children;for(let i=0;i<3;i++)p[i].className=i<d.count?'potato-dim':'';}); }
+async function adminReset() { await fetch('/api/lucky/reset',{method:'POST'}); toast('✅ 已重置为 3 次'); closeAdmin(); fetch('/api/lucky/count').then(r=>r.json()).then(d=>{document.getElementById('completeCount').textContent=d.count;document.getElementById('adminCurrent').textContent=d.count;const p=document.getElementById('potatoRow').children;for(let i=0;i<3;i++)p[i].className=i<d.count?'potato-dim':'';}); }
 </script>
 </body>
 </html>
