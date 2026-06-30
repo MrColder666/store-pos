@@ -1,135 +1,477 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=750, initial-scale=1.0">
-<title>夏日特惠菜单</title>
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'PingFang SC','Microsoft YaHei',sans-serif; background:#1e1b4b; display:flex; justify-content:center; }
-.poster { width:750px; min-height:1334px; background:linear-gradient(180deg,#f5f3ff 0%,#ede9fe 30%,#fff 100%); position:relative; overflow:hidden; }
-/* Top decorative wave */
-.poster::before { content:''; position:absolute; top:0; left:0; right:0; height:420px; background:linear-gradient(135deg,#1e1b4b 0%,#4c1d95 50%,#7c3aed 100%); border-radius:0 0 60px 60px; }
-.header { position:relative; z-index:1; text-align:center; padding:40px 30px 30px; }
-.header .brand { font-size:22px; font-weight:700; color:rgba(255,255,255,0.7); letter-spacing:4px; }
-.header h1 { font-size:52px; font-weight:800; color:#fff; margin:8px 0 4px; letter-spacing:2px; text-shadow:0 4px 12px rgba(0,0,0,0.2); }
-.header .sub { font-size:18px; color:rgba(255,255,255,0.65); letter-spacing:2px; }
-.header .tagline { display:inline-block; margin-top:16px; background:rgba(255,255,255,0.15); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.2); border-radius:30px; padding:8px 28px; font-size:16px; color:#fde68a; letter-spacing:2px; }
-/* Floating bubble decorations */
-.bubble { position:absolute; border-radius:50%; opacity:0.08; }
-.bubble:nth-child(1) { width:120px; height:120px; background:#a78bfa; top:60px; left:20px; }
-.bubble:nth-child(2) { width:80px; height:80px; background:#c4b5fd; top:100px; right:40px; }
-.bubble:nth-child(3) { width:60px; height:60px; background:#ddd6fe; top:200px; left:60px; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=750, initial-scale=1.0">
+  <title>夏日冰粉小摊 · 冰山清凉季</title>
+  <style>
+    /* ===== 全局重置 ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-/* Product grid */
-.products { position:relative; z-index:1; padding:0 40px; margin-top:-20px; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-.product-card { background:#fff; border-radius:20px; padding:20px; box-shadow:0 4px 20px rgba(99,102,241,0.08); border:1px solid #f3f0ff; transition:.2s; position:relative; overflow:hidden; }
-.product-card::after { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,#7c3aed,#a78bfa); }
-.product-card .category { font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#7c3aed; font-weight:600; margin-bottom:4px; }
-.product-card .name { font-size:22px; font-weight:700; color:#1e1b4b; margin-bottom:8px; }
-.product-card .price-row { display:flex; align-items:baseline; gap:8px; }
-.product-card .price { font-size:28px; font-weight:800; color:#7c3aed; }
-.product-card .orig-price { font-size:14px; text-decoration:line-through; color:#9ca3af; }
-.product-card .discount-tag { font-size:11px; font-weight:700; background:#fef2f2; color:#dc2626; padding:2px 8px; border-radius:6px; }
-.product-card .stock { font-size:12px; color:#9ca3af; margin-top:4px; }
+    body {
+      font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: #0f172a;
+      display: flex;
+      justify-content: center;
+    }
 
-/* Ice-themed gradient card */
-.product-card.ice { background:linear-gradient(135deg,#fff,#f0fdf4); border-color:#d1fae5; }
-.product-card.ice::after { background:linear-gradient(90deg,#10b981,#34d399); }
-.product-card.ice .price { color:#059669; }
-.product-card.ice .category { color:#059669; }
+    /* ===== 主海报容器 ===== */
+    .poster {
+      width: 750px;
+      min-height: 1334px;
+      background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 45%, #ecfeff 100%);
+      position: relative;
+      overflow: hidden;
+    }
 
-/* Promo section */
-.promo { position:relative; z-index:1; margin:24px 40px; background:linear-gradient(135deg,#fef3c7,#fde68a); border-radius:24px; padding:24px 28px; text-align:center; border:2px dashed #f59e0b; }
-.promo h2 { font-size:24px; font-weight:800; color:#92400e; margin-bottom:8px; }
-.promo p { font-size:15px; color:#78350f; line-height:1.6; }
-.promo .wheel-icon { font-size:48px; display:block; margin:0 auto 8px; }
+    /* 顶部装饰冰浪 */
+    .poster::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 440px;
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 55%, #0369a1 100%);
+      border-radius: 0 0 64px 64px;
+    }
 
-/* QR section */
-.footer { position:relative; z-index:1; margin:24px 40px 40px; display:flex; gap:20px; align-items:center; background:#fff; border-radius:20px; padding:20px 24px; box-shadow:0 2px 12px rgba(0,0,0,0.04); }
-.footer .qr { width:90px; height:90px; border-radius:8px; border:2px solid #e5e7eb; }
-.footer .info { flex:1; }
-.footer .info h3 { font-size:16px; font-weight:700; color:#1e1b4b; margin-bottom:4px; }
-.footer .info p { font-size:13px; color:#6b7280; line-height:1.5; }
+    /* ===== 头部区域 ===== */
+    .header {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 44px 30px 32px;
+    }
 
-@media print { body { background:white; } .poster { box-shadow:none; } }
-</style>
+    .header .brand {
+      font-size: 21px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.85);
+      letter-spacing: 4px;
+    }
+
+    .header h1 {
+      font-size: 54px;
+      font-weight: 800;
+      color: #ffffff;
+      margin: 6px 0 4px;
+      letter-spacing: 3px;
+      text-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .header .sub {
+      font-size: 17px;
+      color: rgba(255, 255, 255, 0.75);
+      letter-spacing: 3px;
+    }
+
+    .header .tagline {
+      display: inline-block;
+      margin-top: 18px;
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 40px;
+      padding: 8px 32px;
+      font-size: 16px;
+      color: #fde68a;
+      letter-spacing: 2px;
+      font-weight: 500;
+    }
+
+    /* ===== 浮动气泡装饰（冰山碎冰） ===== */
+    .bubble {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.10;
+      z-index: 1;
+    }
+
+    .bubble:nth-child(1) {
+      width: 140px;
+      height: 140px;
+      background: #7dd3fc;
+      top: 72px;
+      left: -24px;
+    }
+
+    .bubble:nth-child(2) {
+      width: 96px;
+      height: 96px;
+      background: #38bdf8;
+      top: 170px;
+      right: 16px;
+    }
+
+    .bubble:nth-child(3) {
+      width: 66px;
+      height: 66px;
+      background: #bae6fd;
+      top: 290px;
+      left: 56px;
+    }
+
+    /* ===== 产品网格 ===== */
+    .products {
+      position: relative;
+      z-index: 2;
+      padding: 0 34px;
+      margin-top: -8px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    /* 卡片整体：flex 布局，左侧图片，右侧文字 */
+    .product-card {
+      display: flex;
+      align-items: stretch;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 24px;
+      box-shadow: 0 8px 32px rgba(14, 165, 233, 0.08);
+      border: 1px solid rgba(186, 230, 253, 0.5);
+      transition: 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .product-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #0ea5e9, #2dd4bf);
+      border-radius: 24px 24px 0 0;
+    }
+
+    /* 左侧图片区：固定宽，1:1 正方形，图片自适应裁剪 */
+    .card-img {
+      width: 130px;
+      aspect-ratio: 1 / 1;
+      flex-shrink: 0;
+      background: #f1f5f9;
+      border-right: 2px dashed #bae6fd;
+      overflow: hidden;
+      border-top-left-radius: 24px;
+      border-bottom-left-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* 右侧文字信息区 */
+    .card-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 16px 16px 16px 14px;
+      min-width: 0;
+    }
+
+    .product-card .category {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #0284c7;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .product-card .name {
+      font-size: 19px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+
+    .product-card .price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .product-card .price {
+      font-size: 24px;
+      font-weight: 800;
+      color: #0ea5e9;
+    }
+
+    .product-card .orig-price {
+      font-size: 13px;
+      text-decoration: line-through;
+      color: #334155;
+    }
+
+    .product-card .discount-tag {
+      font-size: 10px;
+      font-weight: 700;
+      background: #fff1f2;
+      color: #e11d48;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    /* 介绍文字 —— 调亮颜色 */
+    .product-card .stock {
+      font-size: 12px;
+      color: #1e293b;
+      margin-top: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    /* 冰品主题渐变卡片（冰粉/冰沙） */
+    .product-card.ice {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(191, 219, 250, 0.25));
+      border-color: rgba(147, 197, 253, 0.6);
+    }
+
+    .product-card.ice::after {
+      background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+    }
+
+    .product-card.ice .price {
+      color: #0d9488;
+    }
+
+    .product-card.ice .category {
+      color: #0f766e;
+    }
+
+    /* ===== 促销横幅（上下结构：图标在上，图片在中，文字在下） ===== */
+    .promo {
+      position: relative;
+      z-index: 2;
+      margin: 22px 36px;
+      background: linear-gradient(135deg, #fffbeb, #fef3c7);
+      border-radius: 22px;
+      padding: 36px 28px;
+      border: 2px dashed #f59e0b;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      text-align: center;
+      min-height: 400px;
+    }
+
+    /* 顶部图标 */
+    .promo .wheel-icon {
+      font-size: 58px;
+      flex-shrink: 0;
+      margin-bottom: 4px;
+    }
+
+    /* 中间图片：350×350 */
+    .lucky-img {
+      width: 340px;
+      height: 340px;
+      border-radius: 12px;
+      flex-shrink: 0;
+      object-fit: contain;
+      background: #fff;
+      border: 1px solid #f59e0b;
+      padding: 4px;
+    }
+
+    /* 底部文字 */
+    .promo-text {
+      max-width: 550px;
+    }
+
+    .promo-text h2 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #92400e;
+      margin-bottom: 10px;
+    }
+
+    .promo-text p {
+      font-size: 15px;
+      color: #78350f;
+      line-height: 1.8;
+    }
+
+    /* ===== 底部欢迎语区域 ===== */
+    .footer {
+      position: relative;
+      z-index: 2;
+      margin: 22px 36px 36px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 24px 22px;
+      border: 1px solid rgba(186, 230, 253, 0.6);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+    }
+
+    .footer .main-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      letter-spacing: 1px;
+    }
+
+    .footer .disclaimer {
+      font-size: 9px;
+      color: #888;
+    }
+
+    /* ===== 打印样式 ===== */
+    @media print {
+      body {
+        background: white;
+      }
+      .poster {
+        box-shadow: none;
+      }
+    }
+
+    /* 响应式微调 */
+    @media (max-width: 650px) {
+      .card-img {
+        width: 110px;
+      }
+      .promo {
+        padding: 28px 16px;
+        gap: 18px;
+        min-height: auto;
+      }
+      .lucky-img {
+        width: 260px;
+        height: 260px;
+      }
+      .promo .wheel-icon {
+        font-size: 44px;
+      }
+    }
+  </style>
 </head>
 <body>
-<div class="poster">
-  <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
 
-  <!-- Header -->
-  <div class="header">
-    <div class="brand">STORE · POS</div>
-    <h1>夏日清凉菜单</h1>
-    <div class="sub">ICE · DRINK · SNACK</div>
-    <div class="tagline">✨ 幸运大转盘火热进行中！</div>
+  <div class="poster">
+
+    <!-- 碎冰冰山气泡 -->
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+
+    <!-- 头部 -->
+    <div class="header">
+      <div class="brand">❄️ 暑假的快乐从这里开始</div>
+      <h1>夏日冰粉小摊</h1>
+      <div class="sub">冰沙 · 冰粉 · 零食 · 饮料</div>
+      <div class="tagline">✨ 幸运大转盘火热进行中！</div>
+    </div>
+
+    <!-- 产品列表 -->
+    <div class="products">
+      <!-- 冰粉 -->
+      <div class="product-card ice">
+        <div class="card-img">
+          <img src="/static/img1.png" alt="椰子冰粉">
+        </div>
+        <div class="card-info">
+          <div class="category">🍧 甜品</div>
+          <div class="name">冰粉</div>
+          <div class="price-row">
+            <span class="price">¥5.00</span>
+          </div>
+          <div class="stock">🧊 清爽Q弹 · 限时椰子口味</div>
+        </div>
+      </div>
+
+      <!-- 冰沙 -->
+      <div class="product-card ice">
+        <div class="card-img">
+          <img src="/static/img2.png" alt="芬达冰沙">
+        </div>
+        <div class="card-info">
+          <div class="category">🍧 甜品</div>
+          <div class="name">冰沙</div>
+          <div class="price-row">
+            <span class="price">¥2.00</span>
+            <span class="orig-price">¥2.50</span>
+            <span class="discount-tag">-20%</span>
+          </div>
+          <div class="stock">每周特殊 · 不一样的限时口味 🍓🍉🍑</div>
+        </div>
+      </div>
+
+      <!-- 饮料 -->
+      <div class="product-card">
+        <div class="card-img">
+          <img src="/static/img3.png" alt="可乐·雪碧·芬达">
+        </div>
+        <div class="card-info">
+          <div class="category">🥤 饮品</div>
+          <div class="name">饮料</div>
+          <div class="price-row">
+            <span class="price">¥2.50</span>
+            <span class="orig-price">¥3.00</span>
+            <span class="discount-tag">-16.5%</span>
+          </div>
+          <div class="stock">🔥 限时特惠 — 可乐/雪碧/芬达</div>
+        </div>
+      </div>
+
+      <!-- 薯片 -->
+      <div class="product-card">
+        <div class="card-img">
+          <img src="/static/img4.png" alt="乐事薯片">
+        </div>
+        <div class="card-info">
+          <div class="category">🥔 零食</div>
+          <div class="name">薯片</div>
+          <div class="price-row">
+            <span class="price">¥2.00</span>
+          </div>
+          <div class="stock">原味 · 黄瓜味 · 红烩味 —— 薄脆三重奏</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 促销横幅（上下结构：图标在上，图片在中，文字在下） -->
+    <div class="promo">
+      <span class="wheel-icon">🎰</span>
+      <img src="/static/lucky.png" class="lucky-img" alt="中奖概率分布">
+      <div class="promo-text">
+        <h2>幸运大转盘 · 概率透明无套路</h2>
+        <p>
+          集齐「薯」「片」「好吃」→ 免费领 2 包薯片！<br>
+          每 3 次抽奖就大概就有 2 次中奖哦～<br>
+          高达 <u><strong>70%</strong></u> 中奖率!
+        </p>
+      </div>
+    </div>
+
+    <!-- 底部欢迎语 + 免责声明 -->
+    <div class="footer">
+      <span class="main-text">期待您的惠顾！</span><br>
+      <span class="disclaimer">所有图片仅供参考，请以实物为准</span>
+    </div>
+
   </div>
 
-  <!-- Products -->
-  <div class="products">
-    <!-- 冰粉 -->
-    <div class="product-card ice">
-      <div class="category">🍧 甜品</div>
-      <div class="name">冰粉</div>
-      <div class="price-row">
-        <span class="price">¥5.00</span>
-      </div>
-      <div class="stock">当日库存：9 份</div>
-    </div>
-
-    <!-- 冰沙 -->
-    <div class="product-card ice">
-      <div class="category">🍧 甜品</div>
-      <div class="name">冰沙</div>
-      <div class="price-row">
-        <span class="price">¥2.00</span>
-        <span class="orig-price">¥2.50</span>
-        <span class="discount-tag">-20%</span>
-      </div>
-      <div class="stock">当日库存：15 份</div>
-    </div>
-
-    <!-- 饮料 -->
-    <div class="product-card">
-      <div class="category">🥤 饮品</div>
-      <div class="name">饮料</div>
-      <div class="price-row">
-        <span class="price">¥2.50</span>
-        <span class="orig-price">¥3.00</span>
-        <span class="discount-tag">-16.5%</span>
-      </div>
-      <div class="stock">当日库存：11 份</div>
-    </div>
-
-    <!-- 薯片 -->
-    <div class="product-card">
-      <div class="category">🥔 零食</div>
-      <div class="name">薯片</div>
-      <div class="price-row">
-        <span class="price">¥2.00</span>
-      </div>
-      <div class="stock">当日库存：14 包</div>
-    </div>
-  </div>
-
-  <!-- Promo -->
-  <div class="promo">
-    <span class="wheel-icon">🎰</span>
-    <h2>幸运大转盘 · 100% 中奖</h2>
-    <p>抽中「薯」「片」「好吃」→ 免费领 2 包薯片！<br>每 3 次抽奖就有 2 次中奖哦～</p>
-  </div>
-
-  <!-- Footer / QR -->
-  <div class="footer">
-    <img class="qr" src="static/qr/wechat.png" alt="微信" onerror="this.style.display='none'">
-    <img class="qr" src="static/qr/alipay.png" alt="支付宝" onerror="this.style.display='none'">
-    <div class="info">
-      <h3>📱 扫码点单 / 支付</h3>
-      <p>支持微信、支付宝扫码 · 欢迎来店品尝！<br>中奖概率透明 · 无套路 · 每周更新</p>
-    </div>
-  </div>
-</div>
 </body>
 </html>
