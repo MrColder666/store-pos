@@ -49,6 +49,7 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+<audio id="cashierAudio" src="/static/cashier.m4a" preload="auto" style="display:none"></audio>
 
 <div class="version-badge">v2.3.2</div>
 
@@ -604,8 +605,8 @@ async function confirmPay() {
     }
 
     // Success!
-    // Play cashier sound
-    try { const s=new Audio('/static/cashier.m4a'); s.play().catch(()=>{}); } catch(e){}
+    // Play cashier sound (preloaded)
+    try { document.getElementById('cashierAudio').play().catch(()=>{}); } catch(e){}
     closePayModal();
     currentPayOrder = { id: orderId, total: data2.total, paid: data2.paid, change: data2.change, method: data2.method };
     showPaySuccess(orderId, data2);
@@ -674,8 +675,5 @@ function closePaySuccess() {
 
 loadProducts();
 </script>
-<script>
-(function(){document.body.addEventListener('click',function(e){var t=e.target.closest('button');if(!t||t.disabled)return;try{var a=new(window.AudioContext||window.webkitAudioContext)();var o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=800;g.gain.setValueAtTime(0.03,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+0.04);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+0.04)}catch(e){}})})();
-</script>
-</body>
+
 </html>
