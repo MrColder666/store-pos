@@ -9,6 +9,7 @@ from models import get_db, init_db
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 
 # ─── Initialize ────────────────────────────────────────────────
@@ -151,6 +152,8 @@ def create_order():
     data = request.get_json(force=True)
     items = data.get('items', [])
     note = data.get('note', '').strip()
+    customer_id = data.get('customer_id', 0)
+    customer_name = data.get('customer_name', '').strip()
     if not items:
         return jsonify({'error': '订单为空'}), 400
 
@@ -236,10 +239,22 @@ def create_order():
             coupon_discount *= total_qty
         total = round(max(0, total - coupon_discount), 2)
 
+    # Apply membership discount
+    member_discount = 0
+    if customer_id > 0:
+        m = conn.execute("SELECT * FROM members WHERE id=?",(customer_id,)).fetchone()
+        if m:
+            today = date.today().isoformat()
+            if m['discount_level'] == '90off':
+                member_discount = round(total * 0.10, 2)
+            elif m['discount_level'] == '95off':
+                member_discount = round(total * 0.05, 2)
+            total = round(max(0, total - member_discount), 2)
+
     total = round(total, 2)
     cur = conn.execute(
-        "INSERT INTO orders (total_amount, item_count, note, status, payment_status) VALUES (?,?,?,'pending','unpaid')",
-        (total, total_qty, note)
+        "INSERT INTO orders (total_amount, item_count, note, status, payment_status, customer_name, customer_id) VALUES (?,?,?,'pending','unpaid',?,?)",
+        (total, total_qty, note, customer_name, customer_id)
     )
     order_id = cur.lastrowid
 
@@ -305,6 +320,25 @@ def pay_order(oid):
         "INSERT INTO payments (order_id, method, amount) VALUES (?,?,?)",
         (oid, method, total)
     )
+
+    # Update consecutive days for the customer
+    if order['customer_id'] > 0:
+        m = conn.execute("SELECT * FROM members WHERE id=?",(order['customer_id'],)).fetchone()
+        if m:
+            today = date.today().isoformat()
+            last = m['last_purchase_date'] or ''
+            consec = m['consecutive_days'] or 1
+            if last == today: pass
+            elif last == (date.today()-timedelta(days=1)).isoformat():
+                consec += 1
+                conn.execute("UPDATE members SET consecutive_days=?,last_purchase_date=? WHERE id=?",
+                    (consec, today, order['customer_id']))
+            else:
+                conn.execute("UPDATE members SET consecutive_days=1,last_purchase_date=? WHERE id=?",
+                    (today, order['customer_id']))
+            # Auto-upgrade to member if consecutive >= 3
+            if consec >= 3 and not m['is_member']:
+                conn.execute("UPDATE members SET is_member=1,discount_level='90off' WHERE id=?",(order['customer_id'],))
 
     conn.commit(); conn.close()
     return jsonify({
@@ -876,6 +910,84 @@ def weekly_chart_png():
                     headers={'Content-Disposition': 'inline; filename=weekly_revenue.png'})
 
 
+# ─── Members ──────────────────────────────────────────────────
+@app.route('/api/members', methods=['GET'])
+def list_members():
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM members ORDER BY is_member DESC, id ASC").fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+@app.route('/api/members', methods=['POST'])
+def register_member():
+    """Register a new member or existing customer."""
+    data = request.get_json(force=True)
+    name = data.get('name','').strip()
+    password = data.get('password','').strip()
+    if not name or not password:
+        return jsonify({'error': '姓名和密码不能为空'}), 400
+    conn = get_db()
+    existing = conn.execute("SELECT * FROM members WHERE name=?",(name,)).fetchone()
+    if existing:
+        conn.close()
+        return jsonify({'error': '该用户已存在'}), 400
+    conn.execute("INSERT INTO members (name,password,is_member,discount_level) VALUES (?,?,1,'95off')",
+        (name,password))
+    conn.commit(); conn.close()
+    return jsonify({'ok':True,'message':'会员注册成功，享95折'})
+
+@app.route('/api/members/login', methods=['POST'])
+def login_member():
+    """Login/verify member and return discount info."""
+    data = request.get_json(force=True)
+    name = data.get('name','').strip()
+    password = data.get('password','').strip()
+    if not name: return jsonify({'error':'请输入姓名'}), 400
+    conn = get_db()
+    row = conn.execute("SELECT * FROM members WHERE name=? AND password=?",(name,password)).fetchone()
+    if not row:
+        # Check if name exists (wrong password)
+        exists = conn.execute("SELECT * FROM members WHERE name=?",(name,)).fetchone()
+        conn.close()
+        if exists: return jsonify({'error':'密码错误'}), 400
+        # New customer: auto-create tracking record
+        conn2 = get_db()
+        conn2.execute("INSERT INTO members (name,password,is_member) VALUES (?,?,0)",(name,password))
+        conn2.commit(); conn2.close()
+        return jsonify({'name':name,'is_member':False,'consecutive_days':1,'discount_level':'none'})
+    # Existing member — check consecutive days for 9折
+    today = date.today().isoformat()
+    last_date = row['last_purchase_date'] or ''
+    consecutive = row['consecutive_days'] or 1
+    if last_date == today:
+        pass  # same day, already counted
+    elif last_date == (date.today()-timedelta(days=1)).isoformat():
+        consecutive += 1
+        conn.execute("UPDATE members SET consecutive_days=?,last_purchase_date=? WHERE id=?",
+            (consecutive,today,row['id']))
+        conn.commit()
+    else:
+        consecutive = 1
+        conn.execute("UPDATE members SET consecutive_days=1,last_purchase_date=? WHERE id=?",(today,row['id']))
+        conn.commit()
+    # Determine discount
+    discount = 'none'
+    if row['is_member']: discount = '95off'
+    if consecutive >= 3: discount = '90off'
+    conn.close()
+    return jsonify({
+        'id':row['id'],'name':row['name'],'is_member':bool(row['is_member']),
+        'consecutive_days':consecutive,'discount_level':discount
+    })
+
+@app.route('/api/members/<int:mid>/delete', methods=['POST'])
+def delete_member(mid):
+    conn = get_db()
+    conn.execute("DELETE FROM members WHERE id=?",(mid,))
+    conn.commit(); conn.close()
+    return jsonify({'ok':True})
+
+
 # ─── Lucky Wheel ───────────────────────────────────────────────
 def _get_lucky_count():
     conn = get_db()
@@ -897,6 +1009,10 @@ def lucky_page():
 @app.route('/poster')
 def poster_page():
     return render_template('poster.html')
+
+@app.route('/members')
+def members_page():
+    return render_template('members.html')
 
 @app.route('/api/lucky/count')
 def lucky_count():

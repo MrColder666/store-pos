@@ -51,7 +51,7 @@
 <div class="toast" id="toast"></div>
 <audio id="cashierAudio" src="/static/cashier.m4a" preload="auto" style="display:none"></audio>
 
-<div class="version-badge">v2.3.3</div>
+<div class="version-badge">v2.4.0</div>
 
 <!-- Coupon Password Modal -->
 <div class="modal-bg" id="coupon-pw-bg">
@@ -97,6 +97,17 @@
     <div id="pay-order-summary" style="margin-bottom:10px;font-size:13px;"></div>
     <div style="font-size:22px;font-weight:700;text-align:right;color:var(--primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);">
       应收: ¥<span id="pay-total">0.00</span>
+      <span id="member-discount-badge" style="display:none;font-size:12px;color:var(--success);margin-left:8px;"></span>
+    </div>
+
+    <!-- Member Login -->
+    <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;" id="member-row">
+      <span style="font-size:12px;color:var(--text-secondary);cursor:pointer;" onclick="toggleMemberLogin()">🎫 会员折扣</span>
+      <div id="member-login" style="display:none;flex:1;display:none;gap:4px;">
+        <input id="member-name" class="form-input" placeholder="姓名" style="flex:1;font-size:12px;padding:6px 8px;">
+        <input id="member-pw" class="form-input" type="password" placeholder="密码" style="flex:1;font-size:12px;padding:6px 8px;">
+        <button class="btn btn-sm btn-primary" onclick="loginMember()" style="padding:4px 10px;font-size:12px;">验证</button>
+      </div>
     </div>
 
     <!-- Payment Methods -->
@@ -428,6 +439,32 @@ function changeQty(idx, delta) {
 }
 
 // ── Payment Flow ──────────────────────────────────────────────
+
+// ── Member Discount ────────────────────────────────────────
+let pendingMember = null;
+function toggleMemberLogin() {
+  const el = document.getElementById('member-login');
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+  if (el.style.display !== 'none') { var inp=document.getElementById('member-name'); if(inp)inp.focus(); }
+}
+async function loginMember() {
+  const name = document.getElementById('member-name').value.trim();
+  const pw = document.getElementById('member-pw').value.trim();
+  if (!name) { toast('请输入姓名'); return; }
+  try {
+    const res = await fetch('/api/members/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name:name,password:pw}) });
+    const d = await res.json();
+    if (d.error) { toast('❌ '+d.error); return; }
+    pendingMember = { customer_id: d.id || 0, customer_name: d.name };
+    const badge = document.getElementById('member-discount-badge');
+    if (d.discount_level === '90off') { badge.textContent = '🎉 连续3天 9折'; badge.style.display = 'inline'; }
+    else if (d.discount_level === '95off') { badge.textContent = '👤 会员95折'; badge.style.display = 'inline'; }
+    else { badge.textContent = '第'+d.consecutive_days+'天 ('+(3-d.consecutive_days)+'天后9折)'; badge.style.display = 'inline'; }
+    toast('✅ 已识别'); document.getElementById('member-login').style.display = 'none';
+  } catch(e) { toast('网络错误'); }
+}
+
 let cartBackup = [];
 
 async function openPayModal() {
@@ -439,7 +476,7 @@ async function openPayModal() {
   // Show "calculating" state
   document.getElementById('pay-order-summary').innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:10px;">计算中...</div>';
   document.getElementById('pay-total').textContent = '...';
-  document.getElementById('pay-modal-bg').classList.add('active');
+  pendingMember = null; document.getElementById('member-discount-badge').style.display='none'; document.getElementById('member-login').style.display='none'; document.getElementById('member-name').value=''; document.getElementById('member-pw').value=''; document.getElementById('pay-modal-bg').classList.add('active');
   
   // Reset payment method
   selectedPayMethod = '';
@@ -458,7 +495,9 @@ async function openPayModal() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         items: cart.map(c => ({ product_id: c.id, quantity: c.qty, options: c.options || [] })),
-        note: note
+        note: note,
+        customer_id: (pendingMember?pendingMember.customer_id:0),
+        customer_name: (pendingMember?pendingMember.customer_name:'')
       })
     });
     const data = await res.json();
@@ -605,8 +644,19 @@ async function confirmPay() {
     }
 
     // Success!
-    // Play cashier sound (preloaded audio element)
-    try { var ca=document.getElementById('cashierAudio'); if(ca){ca.currentTime=0;ca.play().catch(function(){})} } catch(e){}
+    // Play cashier sound via Web Audio API (same method as button clicks, reliable)
+    try {
+      var ac=new(window.AudioContext||window.webkitAudioContext)();
+      ac.resume();
+      [523,659,784,1047].forEach(function(f,i){
+        var o=ac.createOscillator(),g=ac.createGain();
+        o.type='sine';o.frequency.value=f;
+        g.gain.setValueAtTime(0.2,ac.currentTime+i*0.15);
+        g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+i*0.15+0.4);
+        o.connect(g);g.connect(ac.destination);
+        o.start(ac.currentTime+i*0.15);o.stop(ac.currentTime+i*0.15+0.4);
+      });
+    } catch(e){}
     closePayModal();
     currentPayOrder = { id: orderId, total: data2.total, paid: data2.paid, change: data2.change, method: data2.method };
     showPaySuccess(orderId, data2);

@@ -77,7 +77,28 @@ def init_db():
             created_at TEXT DEFAULT (datetime('now','localtime')),
             FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            password TEXT NOT NULL,
+            is_member INTEGER DEFAULT 0,
+            consecutive_days INTEGER DEFAULT 1,
+            last_purchase_date TEXT DEFAULT '',
+            discount_level TEXT DEFAULT 'none',
+            created_at TEXT DEFAULT (datetime('now','localtime'))
+        );
     """)
+
+    # ── v2.4.0 Migration: orders customer columns ──
+    try:
+        conn.execute("ALTER TABLE orders ADD COLUMN customer_name TEXT DEFAULT ''")
+    except (sqlite3.OperationalError, sqlite3.IntegrityError):
+        pass
+    try:
+        conn.execute("ALTER TABLE orders ADD COLUMN customer_id INTEGER DEFAULT 0")
+    except (sqlite3.OperationalError, sqlite3.IntegrityError):
+        pass
 
     # ── v2.2.1 Migration: coupon support ────
     try:

@@ -71,6 +71,7 @@
   <a href="/"><span class="icon">🧾</span>收银</a>
   <a href="/products"><span class="icon">📦</span>商品</a>
   <a href="/orders"><span class="icon">📋</span>订单</a>  <a href="/lucky"><span class="icon">🎰</span>抽奖</a>
+  <a href="/members"><span class="icon">👤</span>会员</a>
   <a href="/stats" class="active"><span class="icon">📊</span>统计</a>
 </nav>
 
@@ -140,7 +141,7 @@ async function loadStats() {
 
 loadStats();
 </script>
-<div class="version-badge">v2.3.3</div>
+<div class="version-badge">v2.4.0</div>
 <script>
 (function(){document.body.addEventListener('click',function(e){var t=e.target.closest('button');if(!t||t.disabled)return;try{var a=new(window.AudioContext||window.webkitAudioContext)();a.resume();var o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=800;g.gain.setValueAtTime(0.03,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+0.04);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+0.04)}catch(e){}})})();
 </script>
