@@ -894,6 +894,10 @@ def _set_lucky_count(count):
 def lucky_page():
     return render_template('lucky.html')
 
+@app.route('/poster')
+def poster_page():
+    return render_template('poster.html')
+
 @app.route('/api/lucky/count')
 def lucky_count():
     return jsonify({'count': _get_lucky_count(), 'max': 3})

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=750, initial-scale=1.0">
+<title>夏日特惠菜单</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'PingFang SC','Microsoft YaHei',sans-serif; background:#1e1b4b; display:flex; justify-content:center; }
+.poster { width:750px; min-height:1334px; background:linear-gradient(180deg,#f5f3ff 0%,#ede9fe 30%,#fff 100%); position:relative; overflow:hidden; }
+/* Top decorative wave */
+.poster::before { content:''; position:absolute; top:0; left:0; right:0; height:420px; background:linear-gradient(135deg,#1e1b4b 0%,#4c1d95 50%,#7c3aed 100%); border-radius:0 0 60px 60px; }
+.header { position:relative; z-index:1; text-align:center; padding:40px 30px 30px; }
+.header .brand { font-size:22px; font-weight:700; color:rgba(255,255,255,0.7); letter-spacing:4px; }
+.header h1 { font-size:52px; font-weight:800; color:#fff; margin:8px 0 4px; letter-spacing:2px; text-shadow:0 4px 12px rgba(0,0,0,0.2); }
+.header .sub { font-size:18px; color:rgba(255,255,255,0.65); letter-spacing:2px; }
+.header .tagline { display:inline-block; margin-top:16px; background:rgba(255,255,255,0.15); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.2); border-radius:30px; padding:8px 28px; font-size:16px; color:#fde68a; letter-spacing:2px; }
+/* Floating bubble decorations */
+.bubble { position:absolute; border-radius:50%; opacity:0.08; }
+.bubble:nth-child(1) { width:120px; height:120px; background:#a78bfa; top:60px; left:20px; }
+.bubble:nth-child(2) { width:80px; height:80px; background:#c4b5fd; top:100px; right:40px; }
+.bubble:nth-child(3) { width:60px; height:60px; background:#ddd6fe; top:200px; left:60px; }
+
+/* Product grid */
+.products { position:relative; z-index:1; padding:0 40px; margin-top:-20px; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.product-card { background:#fff; border-radius:20px; padding:20px; box-shadow:0 4px 20px rgba(99,102,241,0.08); border:1px solid #f3f0ff; transition:.2s; position:relative; overflow:hidden; }
+.product-card::after { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,#7c3aed,#a78bfa); }
+.product-card .category { font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#7c3aed; font-weight:600; margin-bottom:4px; }
+.product-card .name { font-size:22px; font-weight:700; color:#1e1b4b; margin-bottom:8px; }
+.product-card .price-row { display:flex; align-items:baseline; gap:8px; }
+.product-card .price { font-size:28px; font-weight:800; color:#7c3aed; }
+.product-card .orig-price { font-size:14px; text-decoration:line-through; color:#9ca3af; }
+.product-card .discount-tag { font-size:11px; font-weight:700; background:#fef2f2; color:#dc2626; padding:2px 8px; border-radius:6px; }
+.product-card .stock { font-size:12px; color:#9ca3af; margin-top:4px; }
+
+/* Ice-themed gradient card */
+.product-card.ice { background:linear-gradient(135deg,#fff,#f0fdf4); border-color:#d1fae5; }
+.product-card.ice::after { background:linear-gradient(90deg,#10b981,#34d399); }
+.product-card.ice .price { color:#059669; }
+.product-card.ice .category { color:#059669; }
+
+/* Promo section */
+.promo { position:relative; z-index:1; margin:24px 40px; background:linear-gradient(135deg,#fef3c7,#fde68a); border-radius:24px; padding:24px 28px; text-align:center; border:2px dashed #f59e0b; }
+.promo h2 { font-size:24px; font-weight:800; color:#92400e; margin-bottom:8px; }
+.promo p { font-size:15px; color:#78350f; line-height:1.6; }
+.promo .wheel-icon { font-size:48px; display:block; margin:0 auto 8px; }
+
+/* QR section */
+.footer { position:relative; z-index:1; margin:24px 40px 40px; display:flex; gap:20px; align-items:center; background:#fff; border-radius:20px; padding:20px 24px; box-shadow:0 2px 12px rgba(0,0,0,0.04); }
+.footer .qr { width:90px; height:90px; border-radius:8px; border:2px solid #e5e7eb; }
+.footer .info { flex:1; }
+.footer .info h3 { font-size:16px; font-weight:700; color:#1e1b4b; margin-bottom:4px; }
+.footer .info p { font-size:13px; color:#6b7280; line-height:1.5; }
+
+@media print { body { background:white; } .poster { box-shadow:none; } }
+</style>
+</head>
+<body>
+<div class="poster">
+  <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">STORE · POS</div>
+    <h1>夏日清凉菜单</h1>
+    <div class="sub">ICE · DRINK · SNACK</div>
+    <div class="tagline">✨ 幸运大转盘火热进行中！</div>
+  </div>
+
+  <!-- Products -->
+  <div class="products">
+    <!-- 冰粉 -->
+    <div class="product-card ice">
+      <div class="category">🍧 甜品</div>
+      <div class="name">冰粉</div>
+      <div class="price-row">
+        <span class="price">¥5.00</span>
+      </div>
+      <div class="stock">当日库存：9 份</div>
+    </div>
+
+    <!-- 冰沙 -->
+    <div class="product-card ice">
+      <div class="category">🍧 甜品</div>
+      <div class="name">冰沙</div>
+      <div class="price-row">
+        <span class="price">¥2.00</span>
+        <span class="orig-price">¥2.50</span>
+        <span class="discount-tag">-20%</span>
+      </div>
+      <div class="stock">当日库存：15 份</div>
+    </div>
+
+    <!-- 饮料 -->
+    <div class="product-card">
+      <div class="category">🥤 饮品</div>
+      <div class="name">饮料</div>
+      <div class="price-row">
+        <span class="price">¥2.50</span>
+        <span class="orig-price">¥3.00</span>
+        <span class="discount-tag">-16.5%</span>
+      </div>
+      <div class="stock">当日库存：11 份</div>
+    </div>
+
+    <!-- 薯片 -->
+    <div class="product-card">
+      <div class="category">🥔 零食</div>
+      <div class="name">薯片</div>
+      <div class="price-row">
+        <span class="price">¥2.00</span>
+      </div>
+      <div class="stock">当日库存：14 包</div>
+    </div>
+  </div>
+
+  <!-- Promo -->
+  <div class="promo">
+    <span class="wheel-icon">🎰</span>
+    <h2>幸运大转盘 · 100% 中奖</h2>
+    <p>抽中「薯」「片」「好吃」→ 免费领 2 包薯片！<br>每 3 次抽奖就有 2 次中奖哦～</p>
+  </div>
+
+  <!-- Footer / QR -->
+  <div class="footer">
+    <img class="qr" src="static/qr/wechat.png" alt="微信" onerror="this.style.display='none'">
+    <img class="qr" src="static/qr/alipay.png" alt="支付宝" onerror="this.style.display='none'">
+    <div class="info">
+      <h3>📱 扫码点单 / 支付</h3>
+      <p>支持微信、支付宝扫码 · 欢迎来店品尝！<br>中奖概率透明 · 无套路 · 每周更新</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>
