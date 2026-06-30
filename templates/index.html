@@ -465,6 +465,22 @@ async function loginMember() {
     else if (d.discount_level === '95off') { badge.textContent = '👤 会员95折'; badge.style.display = 'inline'; }
     else { badge.textContent = '第'+d.consecutive_days+'天 ('+(3-d.consecutive_days)+'天后9折)'; badge.style.display = 'inline'; }
     toast('✅ 已识别'); document.getElementById('member-login').style.display = 'none';
+    // Re-create order with member discount
+    try {
+      const note = document.getElementById('order-note').value.trim();
+      const res = await fetch('/api/orders', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          items: cart.map(c => ({ product_id: c.id, quantity: c.qty, options: c.options || [] })),
+          note: note, customer_id: d.id||0, customer_name: d.name
+        })
+      });
+      const od = await res.json();
+      if (!od.error) {
+        window._pendingOrderId = od.order_id;
+        window._pendingOrderTotal = od.total;
+        document.getElementById('pay-total').textContent = od.total.toFixed(2);
+      }
+    } catch(e){}
   } catch(e) { toast('网络错误'); }
 }
 
@@ -479,7 +495,7 @@ async function openPayModal() {
   // Show "calculating" state
   document.getElementById('pay-order-summary').innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:10px;">计算中...</div>';
   document.getElementById('pay-total').textContent = '...';
-  pendingMember = null; document.getElementById('member-discount-badge').style.display='none'; document.getElementById('member-login').style.display='none'; document.getElementById('member-name').value=''; document.getElementById('member-pw').value=''; document.getElementById('pay-modal-bg').classList.add('active');
+  pendingMember = null; document.getElementById('member-discount-badge').style.display='none'; document.getElementById('member-login').style.display='none'; document.getElementById('member-name').value=''; document.getElementById('member-pw').value='';
   
   // Reset payment method
   selectedPayMethod = '';

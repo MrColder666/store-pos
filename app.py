@@ -950,11 +950,9 @@ def login_member():
         exists = conn.execute("SELECT * FROM members WHERE name=?",(name,)).fetchone()
         conn.close()
         if exists: return jsonify({'error':'密码错误'}), 400
-        # New customer: auto-create tracking record
-        conn2 = get_db()
-        conn2.execute("INSERT INTO members (name,password,is_member) VALUES (?,?,0)",(name,password))
-        conn2.commit(); conn2.close()
-        return jsonify({'name':name,'is_member':False,'consecutive_days':1,'discount_level':'none'})
+        # Not registered: return error
+        conn.close()
+        return jsonify({'error':'未注册，请先在会员管理页注册'}), 400
     # Existing member — check consecutive days for 9折
     today = date.today().isoformat()
     last_date = row['last_purchase_date'] or ''
