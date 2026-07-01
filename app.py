@@ -986,6 +986,59 @@ def delete_member(mid):
     return jsonify({'ok':True})
 
 
+# ─── Tickets (抽奖兑换) ──────────────────────────────────────
+@app.route('/tickets')
+def tickets_page():
+    return render_template('tickets.html')
+
+@app.route('/api/tickets', methods=['GET'])
+def list_tickets():
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM tickets ORDER BY used ASC, id DESC LIMIT 200").fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+@app.route('/api/tickets/generate', methods=['POST'])
+def generate_tickets():
+    import uuid
+    data = request.get_json(force=True)
+    count = int(data.get('count', 20))
+    if count < 1 or count > 500:
+        return jsonify({'error': '数量 1-500'}), 400
+    types = ['薯','片','好吃']
+    conn = get_db()
+    generated = []
+    for _ in range(count):
+        uid = str(uuid.uuid4())
+        t = types[_ % 3]  # evenly distribute
+        conn.execute("INSERT INTO tickets (uuid, type) VALUES (?,?)", (uid, t))
+        generated.append({'uuid': uid, 'type': t})
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'count': len(generated), 'tickets': generated})
+
+@app.route('/api/tickets/redeem', methods=['POST'])
+def redeem_ticket():
+    data = request.get_json(force=True)
+    uid = data.get('uuid','').strip()
+    if not uid: return jsonify({'error':'请输入UUID'}), 400
+    conn = get_db()
+    row = conn.execute("SELECT * FROM tickets WHERE uuid=?",(uid,)).fetchone()
+    if not row:
+        conn.close(); return jsonify({'error':'无效UUID — 该纸条不存在'}), 400
+    if row['used']:
+        conn.close(); return jsonify({'error':'已兑过 — 该纸条已在 '+row.get('created_at','')+' 被兑换'}), 400
+    conn.execute("UPDATE tickets SET used=1 WHERE uuid=?",(uid,))
+    conn.commit(); conn.close()
+    return jsonify({'ok':True,'type':row['type'],'uuid':uid,'message':'✅ 兑换成功：'+row['type']})
+
+@app.route('/api/tickets/clear', methods=['POST'])
+def clear_tickets():
+    conn = get_db()
+    conn.execute("DELETE FROM tickets")
+    conn.commit(); conn.close()
+    return jsonify({'ok':True})
+
+
 # ─── Lucky Wheel ───────────────────────────────────────────────
 def _get_lucky_count():
     conn = get_db()

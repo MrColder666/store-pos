@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>抽奖兑换 - Store POS</title><style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='''visible'''"></head>
+<body style="visibility:hidden">
+<div class="header"><h1>🎟 抽奖兑换</h1><div class="sub">生成纸条 · 核销兑换</div></div>
+<div class="container">
+
+  <div class="card"><h3>🖨 生成纸条</h3>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input class="form-input" id="gen-count" type="number" min="1" max="100" value="20" style="width:80px;text-align:center;">
+      <button class="btn btn-primary" onclick="generateTickets()">生成纸条</button>
+      <button class="btn btn-accent" onclick="printTickets()">🖨 打印</button>
+    </div>
+    <div id="ticket-sheet" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:4px;max-height:240px;overflow-y:auto;"></div>
+  </div>
+
+  <div class="card"><h3>🔍 核销纸条</h3>
+    <div style="display:flex;gap:8px;">
+      <input class="form-input" id="redeem-uuid" placeholder="输入UUID或扫码" style="flex:1;font-family:monospace;">
+      <button class="btn btn-success" onclick="redeemTicket()">兑换</button>
+    </div>
+    <div id="redeem-result" style="margin-top:8px;font-size:14px;min-height:24px;"></div>
+  </div>
+
+  <div class="card"><h3>📋 纸条记录</h3>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <button class="btn btn-sm" onclick="loadTickets()">刷新</button>
+      <button class="btn btn-sm btn-danger" onclick="clearTickets()">清空全部</button>
+    </div>
+    <div id="ticket-list" style="max-height:400px;overflow-y:auto;font-size:12px;"></div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+<div class="version-badge">v2.4.1</div>
+<div id="print-area" style="display:none;"></div>
+<script>
+function toast(m){var t=document.getElementById('''toast''');t.textContent=m;t.className='''toast show''';setTimeout(function(){t.className='''toast'''},2000);}
+var lastGenerated=[];
+
+async function generateTickets(){
+  var n=parseInt(document.getElementById('''gen-count''').value)||20;
+  var r=await fetch('''/api/tickets/generate''',{method:'''POST''',headers:{'''Content-Type''':''''application/json'''},body:JSON.stringify({count:n})});
+  var d=await r.json();
+  if(d.error){toast('''❌ '''+d.error);return}
+  lastGenerated=d.tickets;
+  var el=document.getElementById('''ticket-sheet''');
+  el.innerHTML=d.tickets.map(function(t,i){
+    return ''''<div style="padding:4px 8px;border:1px dashed var(--border);border-radius:6px;font-size:11px;text-align:center;background:"+(t.type==="薯"?"#fef3c7":t.type==="片"?"#dbeafe":"#fce7f3")+" min-width:70px;"><b>"+t.type+"</b><br><span style="font-size:9px;font-family:monospace;">"+t.uuid.slice(0,8)+"</span></div>''';
+  }).join(''');
+  toast('''✅ 生成 '+d.count+' 张纸条''');
+  loadTickets();
+}
+
+async function loadTickets(){
+  var r=await fetch('''/api/tickets''');
+  var d=await r.json();
+  document.getElementById('''ticket-list''').innerHTML=d.length?d.map(function(t){
+    return ''''<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span><b style="color:"+(t.type==="薯"?"#d97706":t.type==="片"?"#2563eb":"#db2777")+"">"+t.type+"</b> <span style="font-family:monospace;font-size:10px;">"+t.uuid.slice(0,12)+"</span></span><span>"+(t.used?"✅ 已兑":"⏳ 未兑")+"</span></div>''';
+  }).join(''''''):''''<div style="color:var(--text-secondary);text-align:center;padding:12px;">暂无纸条</div>''';
+}
+
+async function redeemTicket(){
+  var uid=document.getElementById('''redeem-uuid''').value.trim();
+  var el=document.getElementById('''redeem-result''');
+  if(!uid){el.innerHTML='''<span style="color:var(--danger);">请输入UUID</span>''';return}
+  var r=await fetch('''/api/tickets/redeem''',{method:'''POST''',headers:{'''Content-Type''':''''application/json'''},body:JSON.stringify({uuid:uid})});
+  var d=await r.json();
+  if(d.error){el.innerHTML='''<span style="color:var(--danger);">❌ '''+d.error+''''</span>'''}
+  else{el.innerHTML='''<span style="color:var(--success);font-weight:700;">🎉 '''+d.message+''''</span>''';document.getElementById('''redeem-uuid''').value=''''''}
+  loadTickets();
+}
+function printTickets(){
+  if(!lastGenerated.length){toast('''请先生成纸条''');return}
+  var h='''<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;margin:20px}@media print{@page{size:A4;margin:10mm}} .t{display:inline-block;margin:4px;padding:10px 14px;border:1px dashed #ccc;border-radius:6px;font-size:12px;text-align:center;min-width:80px} .t b{font-size:16px} .uuid{font-size:8px;font-family:monospace}</style></head><body>''';
+  lastGenerated.forEach(function(t,i){
+    h+='''<div class="t" style="background:"+(t.type==="薯"?"#fef3c7":t.type==="片"?"#dbeafe":"#fce7f3")+""><b>"+t.type+"</b><br><span class="uuid">"+t.uuid+"</span><br><small>#"+(i+1)+"</small></div>''';
+    if(i>0&&i%5===4)h+='''<br>''';
+  });
+  h+='''</body></html>''';
+  var w=window.open('''','''_blank''');
+  w.document.write(h);w.document.close();
+}
+
+async function clearTickets(){
+  if(!confirm('''确定清空全部纸条？此操作不可撤销。'''))return;
+  await fetch('''/api/tickets/clear''',{method:'''POST'''});
+  toast('''已清空''');loadTickets();
+}
+loadTickets();
+</script></body></html>

@@ -88,7 +88,17 @@ def init_db():
             discount_level TEXT DEFAULT 'none',
             created_at TEXT DEFAULT (datetime('now','localtime'))
         );
+        CREATE TABLE IF NOT EXISTS tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uuid TEXT NOT NULL UNIQUE,
+            type TEXT NOT NULL CHECK(type IN ('薯','片','好吃')),
+            used INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now','localtime'))
+        );
     """)
+
+    # ── v2.4.1 Migration: tickets table ──
+    conn.execute("CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT NOT NULL UNIQUE, type TEXT NOT NULL CHECK(type IN ('薯','片','好吃')), used INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now','localtime')))")
 
     # ── v2.4.0 Migration: orders customer columns ──
     try:
