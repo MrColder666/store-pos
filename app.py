@@ -16,9 +16,6 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 def icon_192():
     return send_file('static/icon-192.png')
 
-@app.route('/cashier.m4a')
-def cashier_m4a():
-    return send_file('static/cashier.m4a')
 
 
 # ─── Initialize ────────────────────────────────────────────────
