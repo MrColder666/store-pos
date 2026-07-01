@@ -1022,7 +1022,8 @@ def redeem_ticket():
     uid = data.get('uuid','').strip()
     if not uid: return jsonify({'error':'请输入UUID'}), 400
     conn = get_db()
-    row = conn.execute("SELECT * FROM tickets WHERE uuid=?",(uid,)).fetchone()
+    # Support partial match (prefix)
+    row = conn.execute("SELECT * FROM tickets WHERE uuid=? OR uuid LIKE ?",(uid, uid+'%')).fetchone()
     if not row:
         conn.close(); return jsonify({'error':'无效UUID — 该纸条不存在'}), 400
     if row['used']:

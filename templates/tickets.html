@@ -16,7 +16,7 @@
 
   <div class="card"><h3>🔍 核销纸条</h3>
     <div style="display:flex;gap:8px;">
-      <input class="form-input" id="redeem-uuid" placeholder="输入UUID或扫码" style="flex:1;font-family:monospace;">
+      <input class="form-input" id="redeem-uuid" placeholder="输入UUID（支持前缀匹配）" style="flex:1;font-family:monospace;">
       <button class="btn btn-success" onclick="redeemTicket()">兑换</button>
     </div>
     <div id="redeem-result" style="margin-top:8px;font-size:14px;min-height:24px;"></div>
@@ -25,7 +25,7 @@
   <div class="card"><h3>📋 纸条记录</h3>
     <div style="display:flex;gap:6px;margin-bottom:8px;">
       <button class="btn btn-sm" onclick="loadTickets()">刷新</button>
-      <button class="btn btn-sm btn-danger" onclick="clearTickets()">清空全部</button>
+      <button class="btn btn-sm btn-danger" onclick="confirmClear()">清空全部</button>
     </div>
     <div id="ticket-list" style="max-height:400px;overflow-y:auto;font-size:12px;"></div>
   </div>
@@ -33,10 +33,13 @@
 </div>
 <div class="toast" id="toast"></div>
 <div class="version-badge">v2.4.1</div>
-<div id="print-area" style="display:none;"></div>
+
+<!-- Confirm Modal -->
+<div class="modal-bg" id="confirm-bg"><div class="modal" style="text-align:center;max-width:320px;"><h2>⚠️ 确认</h2><p id="confirm-msg" style="color:var(--text-secondary);margin-bottom:12px;"></p><div class="btn-row"><button class="btn btn-ghost" id="confirm-cancel">取消</button><button class="btn btn-danger" id="confirm-ok">确定</button></div></div></div>
 
 <script>
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.className='toast show';setTimeout(function(){t.className='toast'},2000);}
+function customConfirm(msg){return new Promise(function(r){document.getElementById('confirm-msg').textContent=msg;document.getElementById('confirm-bg').classList.add('active');document.getElementById('confirm-ok').onclick=function(){document.getElementById('confirm-bg').classList.remove('active');r(true)};document.getElementById('confirm-cancel').onclick=function(){document.getElementById('confirm-bg').classList.remove('active');r(false)}})}
 var lastGenerated=[];
 
 async function generateTickets(){
@@ -74,17 +77,18 @@ async function redeemTicket(){
 
 function printTickets(){
   if(!lastGenerated.length){toast('请先生成纸条');return}
-  var h='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;margin:20px}@media print{@page{size:A4;margin:10mm}}.t{display:inline-block;margin:4px;padding:10px 14px;border:1px dashed #ccc;border-radius:6px;font-size:12px;text-align:center;min-width:80px}.t b{font-size:16px}.uuid{font-size:8px;font-family:monospace}</style></head><body>';
+  var h='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;margin:10mm}@media print{@page{size:A4;margin:5mm}}.t{display:inline-block;width:27mm;height:18mm;margin:2mm;padding:3mm;border:1px dashed #999;border-radius:4mm;text-align:center;vertical-align:top;box-sizing:border-box}.t b{font-size:6mm}.t .uuid{font-size:2.5mm;font-family:monospace;word-break:break-all}.t .num{font-size:3mm;color:#999}</style></head><body>';
   lastGenerated.forEach(function(t,i){
-    h+='<div class="t" style="background:'+(t.type==='薯'?'#fef3c7':t.type==='片'?'#dbeafe':'#fce7f3')+'"><b>'+t.type+'</b><br><span class="uuid">'+t.uuid+'</span><br><small>#'+(i+1)+'</small></div>';
-    if(i>0&&i%5===4)h+='<br>';
+    h+='<div class="t" style="background:'+(t.type==='薯'?'#fef3c7':t.type==='片'?'#dbeafe':'#fce7f3')+'"><b>'+t.type+'</b><br><span class="uuid">'+t.uuid+'</span><br><span class="num">#'+(i+1)+'</span></div>';
   });
   h+='</body></html>';
-  var w=window.open('','_blank');w.document.write(h);w.document.close();
+  var w=window.open('','_blank','width=600,height=400');if(w){w.document.write(h);w.document.close()}
+  else{var d=document.createElement('div');d.innerHTML=h.replace('<body>','<body style="font-size:9px;line-height:1.2">').replace(/style="[^"]*"/,'');document.body.appendChild(d)}
 }
 
-async function clearTickets(){
-  if(!confirm('确定清空全部纸条？此操作不可撤销。'))return;
+async function confirmClear(){
+  var ok=await customConfirm('确定清空全部纸条？此操作不可撤销。');
+  if(!ok)return;
   await fetch('/api/tickets/clear',{method:'POST'});
   toast('已清空');loadTickets();
 }
