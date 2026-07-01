@@ -22,11 +22,12 @@
   <h2 id="modal-title">注册会员</h2>
   <div class="form-group"><label>姓名 *</label><input class="form-input" id="f-name" placeholder="顾客姓名"></div>
   <div class="form-group"><label>密码 *</label><input class="form-input" id="f-pw" type="password" placeholder="自定义密码"></div>
-  <div class="btn-row">
-    <button class="btn btn-ghost" onclick="closeModal()">取消</button>
-    <button class="btn btn-primary" onclick="saveMember()">注册</button>
-  </div>
+  <div class="btn-row"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveMember()">注册</button></div>
 </div></div>
+
+<!-- Confirm Modal -->
+<div class="modal-bg" id="confirm-bg"><div class="modal" style="text-align:center;"><h2>⚠️ 确认删除</h2><p style="color:var(--text-secondary);margin-bottom:12px;" id="confirm-msg"></p><div class="btn-row"><button class="btn btn-ghost" id="confirm-cancel">取消</button><button class="btn btn-danger" id="confirm-ok">删除</button></div></div></div>
+
 <div class="version-badge">v2.4.0</div>
 
 <script>
@@ -34,27 +35,12 @@ function toast(m){var t=document.getElementById('toast');t.textContent=m;t.class
 function openRegister(){document.getElementById('modal-title').textContent='注册会员';document.getElementById('f-name').value='';document.getElementById('f-pw').value='';document.getElementById('modal-bg').classList.add('active');}
 function closeModal(){document.getElementById('modal-bg').classList.remove('active');}
 
-async function saveMember(){
-  var n=document.getElementById('f-name').value.trim(),p=document.getElementById('f-pw').value.trim();
-  if(!n||!p){toast('请填写完整');return}
-  var r=await fetch('/api/members',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,password:p})});
-  var d=await r.json();
-  if(d.error){toast('❌ '+d.error);return}
-  toast('✅ '+d.message);closeModal();loadMembers();
-}
+function confirmDelete(msg){return new Promise(function(resolve){document.getElementById('confirm-msg').textContent=msg;document.getElementById('confirm-bg').classList.add('active');document.getElementById('confirm-ok').onclick=function(){document.getElementById('confirm-bg').classList.remove('active');resolve(true)};document.getElementById('confirm-cancel').onclick=function(){document.getElementById('confirm-bg').classList.remove('active');resolve(false)}})}
 
-async function loadMembers(){
-  var r=await fetch('/api/members');var members=await r.json();
-  document.getElementById('member-list').innerHTML=members.map(function(m){
-    var badge=m.is_member?(m.discount_level==='90off'?'🎉 9折':'👤 95折'):'⏳ '+m.consecutive_days+'天';
-    return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:600;">'+m.name+'</div><div style="font-size:12px;color:var(--text-secondary);">'+badge+' ('+m.consecutive_days+'/3天)</div></div><div style="display:flex;gap:6px;"><button class="btn btn-sm btn-danger" onclick="deleteMember('+m.id+')">删除</button></div></div></div>';
-  }).join('')||'<div class="card" style="text-align:center;color:var(--text-secondary);">暂无会员</div>';
-}
+async function saveMember(){var n=document.getElementById('f-name').value.trim(),p=document.getElementById('f-pw').value.trim();if(!n||!p){toast('请填写完整');return}var r=await fetch('/api/members',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,password:p})});var d=await r.json();if(d.error){toast('❌ '+d.error);return}toast('✅ '+d.message);closeModal();loadMembers();}
 
-async function deleteMember(id){
-  if(!window.confirm('确定删除该会员？此操作不可撤销。'))return;
-  await fetch('/api/members/'+id+'/delete',{method:'POST'});
-  toast('✅ 已删除');loadMembers();
-}
+async function loadMembers(){var r=await fetch('/api/members');var members=await r.json();document.getElementById('member-list').innerHTML=members.map(function(m){var badge=m.is_member?(m.discount_level==='90off'?'🎉 9折':'👤 95折'):'⏳ '+m.consecutive_days+'天';return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:600;">'+m.name+'</div><div style="font-size:12px;color:var(--text-secondary);">'+badge+' ('+m.consecutive_days+'/3天)</div></div><div style="display:flex;gap:6px;"><button class="btn btn-sm btn-danger" onclick="deleteMember('+m.id+')">删除</button></div></div></div>'}).join('')||'<div class="card" style="text-align:center;color:var(--text-secondary);">暂无会员</div>';}
+
+async function deleteMember(id){var ok=await confirmDelete('确定删除该会员？此操作不可撤销。');if(!ok)return;await fetch('/api/members/'+id+'/delete',{method:'POST'});toast('✅ 已删除');loadMembers();}
 loadMembers();
 </script></body></html>
