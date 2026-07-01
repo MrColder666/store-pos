@@ -745,7 +745,9 @@ function closePaySuccess() {
 
 loadProducts();
 </script>
-
+<script>
+(function(){document.body.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)t=e.target.closest('.card[onclick]');if(!t)t=e.target.closest('.pay-method');if(!t)t=e.target.closest('.opt-item');if(!t||t.disabled)return;try{var a=new(window.AudioContext||window.webkitAudioContext)();a.resume();var o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=800;g.gain.setValueAtTime(0.03,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+0.04);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+0.04)}catch(e){}})})();
+</script>
 <script>
 var _clickAc=null;
 document.body.addEventListener('click',function(e){
@@ -755,14 +757,7 @@ if(!t)t=e.target.closest('.pay-method');
 if(!t)t=e.target.closest('.opt-item');
 if(!t||t.disabled)return;
 if(!_clickAc)_clickAc=new(window.AudioContext||window.webkitAudioContext)();
-try{
-var o=_clickAc.createOscillator(),g=_clickAc.createGain();
-o.type='sine';o.frequency.value=800;
-g.gain.setValueAtTime(0.04,_clickAc.currentTime);
-g.gain.exponentialRampToValueAtTime(0.001,_clickAc.currentTime+0.05);
-o.connect(g);g.connect(_clickAc.destination);
-o.start();o.stop(_clickAc.currentTime+0.05);
-}catch(e){}
+try{var o=_clickAc.createOscillator(),g=_clickAc.createGain();o.type='sine';o.frequency.value=800;g.gain.setValueAtTime(0.04,_clickAc.currentTime);g.gain.exponentialRampToValueAtTime(0.001,_clickAc.currentTime+0.05);o.connect(g);g.connect(_clickAc.destination);o.start();o.stop(_clickAc.currentTime+0.05)}catch(e){}
 });
 </script>
 </body>
