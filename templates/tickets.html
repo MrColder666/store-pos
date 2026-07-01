@@ -92,7 +92,8 @@ function printTickets(){
   lastGenerated.forEach(function(t,i){
     h+='<div class="t" style="background:'+(t.type==='薯'?'#fef3c7':t.type==='片'?'#dbeafe':'#fce7f3')+'"><b>'+t.type+'</b><span class="uuid">'+t.uuid+'</span></div>';
   });
-  h+='</div><script>window.onload=function(){window.print();window.close()}<\/script></body></html>';
+  h+='</div><script>window.onload=function(){window.print();window.close()}<\/script><script>var _fs=!1;function toggleFS(){_fs=!_fs;var e=document.documentElement;if(_fs){e.requestFullscreen&&e.requestFullscreen().catch(function(){_fs=!_fs})}else{document.fullscreenElement&&document.exitFullscreen&&document.exitFullscreen()}}</script>
+</body></html>';
   var w=window.open('','_blank');w.document.write(h);w.document.close();
 }
 async function confirmClear(){
