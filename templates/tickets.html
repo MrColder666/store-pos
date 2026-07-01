@@ -77,13 +77,12 @@ async function redeemTicket(){
 
 function printTickets(){
   if(!lastGenerated.length){toast('请先生成纸条');return}
-  var h='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;margin:10mm}@media print{@page{size:A4;margin:5mm}}.t{display:inline-block;width:27mm;height:18mm;margin:2mm;padding:3mm;border:1px dashed #999;border-radius:4mm;text-align:center;vertical-align:top;box-sizing:border-box}.t b{font-size:6mm}.t .uuid{font-size:2.5mm;font-family:monospace;word-break:break-all}.t .num{font-size:3mm;color:#999}</style></head><body>';
+  var h='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:A4;margin:8mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:"PingFang SC",sans-serif}.grid{display:flex;flex-wrap:wrap;gap:2mm;justify-content:flex-start}.t{width:40mm;height:20mm;border:0.5mm dashed #999;border-radius:2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden}.t b{font-size:7mm;line-height:1;margin-bottom:1mm}.uuid{font-size:2.2mm;font-family:monospace;line-height:1.1;word-break:break-all;padding:0 1mm}</style></head><body><div class="grid">';
   lastGenerated.forEach(function(t,i){
-    h+='<div class="t" style="background:'+(t.type==='薯'?'#fef3c7':t.type==='片'?'#dbeafe':'#fce7f3')+'"><b>'+t.type+'</b><br><span class="uuid">'+t.uuid+'</span><br><span class="num">#'+(i+1)+'</span></div>';
+    h+='<div class="t" style="background:'+(t.type==='薯'?'#fef3c7':t.type==='片'?'#dbeafe':'#fce7f3')+'"><b>'+t.type+'</b><span class="uuid">'+t.uuid+'</span></div>';
   });
-  h+='</body></html>';
-  var w=window.open('','_blank','width=600,height=400');if(w){w.document.write(h);w.document.close()}
-  else{var d=document.createElement('div');d.innerHTML=h.replace('<body>','<body style="font-size:9px;line-height:1.2">').replace(/style="[^"]*"/,'');document.body.appendChild(d)}
+  h+='</div><script>window.onload=function(){window.print();window.close()}<\/script></body></html>';
+  var w=window.open('','_blank');w.document.write(h);w.document.close();
 }
 
 async function confirmClear(){
