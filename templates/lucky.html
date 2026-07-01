@@ -46,11 +46,12 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
 .result-modal .prize-name { font-size:24px; font-weight:700; color:var(--primary); margin:8px 0; }
 .result-modal .btn { margin-top:12px; }
 </style>
-
+<script>
+(function(){var c=0,t=0;document.querySelector('.header h1').addEventListener('click',function(){var n=Date.now();if(n-t<400){c++;if(c>=2){c=0;var d=document.documentElement;if(d.requestFullscreen){d.requestFullscreen().catch(function(){})}else if(d.webkitRequestFullscreen){d.webkitRequestFullscreen()}}}else{c=1}t=n})})();
+</script>
 </head>
 <body style="visibility:hidden">
-
-<button onclick="toggleFS()" style="position:fixed;top:8px;right:8px;z-index:999;background:rgba(124,58,237,0.8);color:#fff;border:none;border-radius:8px;padding:4px 8px;font-size:16px;cursor:pointer;">⛶</button>
+<button onclick="toggleFS()" style="position:fixed;top:8px;right:8px;z-index:999;background:rgba(124,58,237,0.8);color:#fff;border:none;border-radius:8px;padding:4px 8px;font-size:16px;cursor:pointer;backdrop-filter:blur(4px);">⛶</button>
 <div class="header">
   <h1>🎰 幸运大转盘</h1>
   <div class="sub">中奖概率透明，无套路！</div>
@@ -343,7 +344,6 @@ async function adminReset() { await fetch('/api/lucky/reset',{method:'POST'}); t
 <script>
 (function(){document.body.addEventListener('click',function(e){var t=e.target.closest('button');if(!t||t.disabled)return;try{var a=new(window.AudioContext||window.webkitAudioContext)();a.resume();var o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=800;g.gain.setValueAtTime(0.03,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+0.04);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+0.04)}catch(e){}})})();
 </script>
-
 <script>var _fs=!1;function toggleFS(){_fs=!_fs;var e=document.documentElement;if(_fs){e.requestFullscreen&&e.requestFullscreen().catch(function(){_fs=!_fs})}else{document.fullscreenElement&&document.exitFullscreen&&document.exitFullscreen()}}</script>
 </body>
 </html>

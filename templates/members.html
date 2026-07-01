@@ -7,11 +7,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1e1b4b">
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>会员管理 - Store POS</title><style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='visible'">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>会员管理 - Store POS</title><style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='visible'"><script>
+(function(){var c=0,t=0;document.querySelector('.header h1').addEventListener('click',function(){var n=Date.now();if(n-t<400){c++;if(c>=2){c=0;var d=document.documentElement;if(d.requestFullscreen){d.requestFullscreen().catch(function(){})}else if(d.webkitRequestFullscreen){d.webkitRequestFullscreen()}}}else{c=1}t=n})})();
+</script>
 </head>
 <body style="visibility:hidden">
-
-<button onclick="toggleFS()" style="position:fixed;top:8px;right:8px;z-index:999;background:rgba(124,58,237,0.8);color:#fff;border:none;border-radius:8px;padding:4px 8px;font-size:16px;cursor:pointer;">⛶</button>
+<button onclick="toggleFS()" style="position:fixed;top:8px;right:8px;z-index:999;background:rgba(124,58,237,0.8);color:#fff;border:none;border-radius:8px;padding:4px 8px;font-size:16px;cursor:pointer;backdrop-filter:blur(4px);">⛶</button>
 <div class="header"><h1>👤 会员管理</h1><div class="sub">会员折扣 · 连续消费追踪</div></div>
 <div class="container">
   <button class="btn btn-primary btn-block" onclick="openRegister()">＋ 注册会员</button>
@@ -45,6 +46,5 @@ async function saveMember(){var n=document.getElementById('f-name').value.trim()
 async function loadMembers(){var r=await fetch('/api/members');var members=await r.json();document.getElementById('member-list').innerHTML=members.map(function(m){var badge=m.is_member?(m.discount_level==='90off'?'🎉 9折':'👤 95折'):'⏳ '+m.consecutive_days+'天';return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:600;">'+m.name+'</div><div style="font-size:12px;color:var(--text-secondary);">'+badge+' ('+m.consecutive_days+'/3天)</div></div><div style="display:flex;gap:6px;"><button class="btn btn-sm btn-danger" onclick="deleteMember('+m.id+')">删除</button></div></div></div>'}).join('')||'<div class="card" style="text-align:center;color:var(--text-secondary);">暂无会员</div>';}
 async function deleteMember(id){var ok=await confirmDelete('确定删除该会员？此操作不可撤销。');if(!ok)return;await fetch('/api/members/'+id+'/delete',{method:'POST'});toast('✅ 已删除');loadMembers();}
 loadMembers();
-</script>
-<script>var _fs=!1;function toggleFS(){_fs=!_fs;var e=document.documentElement;if(_fs){e.requestFullscreen&&e.requestFullscreen().catch(function(){_fs=!_fs})}else{document.fullscreenElement&&document.exitFullscreen&&document.exitFullscreen()}}</script>
+</script><script>var _fs=!1;function toggleFS(){_fs=!_fs;var e=document.documentElement;if(_fs){e.requestFullscreen&&e.requestFullscreen().catch(function(){_fs=!_fs})}else{document.fullscreenElement&&document.exitFullscreen&&document.exitFullscreen()}}</script>
 </body></html>
