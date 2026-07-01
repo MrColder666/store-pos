@@ -1,16 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta name="mobile-web-app-capable" content="yes">
+<head>
 <meta charset="UTF-8">
 <link rel="icon" href="/static/icon-192.png">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1e1b4b">
-<text y=%22.9em%22 font-size=%2290%22>🧾</text></svg>">
-<rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%237c3aed%22/><text y=%22.8em%22 x=%2250%22 font-size=%2260%22 text-anchor=%22middle%22>🧾</text></svg>">
-
-
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>订单管理 - Store POS</title>
@@ -25,7 +21,6 @@
   <h1>📋 订单管理</h1>
   <div class="sub">查看、编辑、删除历史订单</div>
 </div>
-
 <div class="container">
   <!-- Status Filter -->
   <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
@@ -38,19 +33,16 @@
   </div>
   <div id="orders-list"></div>
 </div>
-
 <div style="padding:0 16px;max-width:600px;margin:0 auto;">
   <a href="/api/export/orders.csv" class="btn btn-block" style="text-decoration:none;text-align:center;background:#f1f5f9;margin-bottom:12px;" download>
     📥 导出全部订单 CSV
   </a>
 </div>
-
 <!-- Order Detail Modal -->
 <div class="modal-bg" id="detail-bg">
   <div class="modal">
     <h2>订单详情</h2>
     <div id="detail-content"></div>
-
     <!-- Edit Note -->
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
       <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">备注</label>
@@ -59,7 +51,6 @@
         <button class="btn btn-sm" style="background:var(--primary);color:#fff;" onclick="saveNote()">保存</button>
       </div>
     </div>
-
     <div class="btn-row" style="margin-top:12px;">
       <button class="btn" style="background:#f1f5f9;" onclick="closeDetail()">关闭</button>
       <button class="btn btn-primary" id="btn-pay-now" onclick="payNow()" style="display:none;">💳 立即收款</button>
@@ -69,7 +60,6 @@
     </div>
   </div>
 </div>
-
 <!-- Confirm Modal -->
 <div class="modal-bg" id="confirm-bg">
   <div class="modal">
@@ -81,7 +71,6 @@
     </div>
   </div>
 </div>
-
 <!-- Payment Modal (for pending orders from orders page) -->
 <div class="modal-bg" id="pay-now-bg">
   <div class="modal">
@@ -107,7 +96,6 @@
     </div>
   </div>
 </div>
-
 <nav class="tab-bar">
   <a href="/"><span class="icon">🧾</span>收银</a>
   <a href="/products"><span class="icon">📦</span>商品</a>
@@ -116,18 +104,15 @@
   <a href="/stats"><span class="icon">📊</span>统计</a>
   <a href="/lucky"><span class="icon">🎰</span>抽奖</a>
 </nav>
-
 <!-- Toast -->
 <div class="version-badge">v2.4.2</div>
 <div class="toast" id="toast"></div>
-
 <script>
 let currentPage = 1;
 let detailOrderId = null;
 let currentFilter = '';
 let payNowMethod = '';
 let payNowOrderId = null;
-
 const STATUS_BADGES = {
   pending: '<span class="badge badge-warning">⏳ 待支付</span>',
   paid: '<span class="badge badge-success">💳 已支付</span>',
@@ -137,13 +122,11 @@ const STATUS_BADGES = {
 };
 const PAY_ICON_HTML = { cash: '💰', wechat: '<img src="/static/wechat-logo.png" style="width:16px;height:16px;vertical-align:middle;">', alipay: '<img src="/static/alipay-logo.png" style="width:16px;height:16px;vertical-align:middle;">' };
 const PAY_NAMES = { cash: '纸币', wechat: '微信', alipay: '支付宝' };
-
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast show';
   setTimeout(() => t.className = 'toast', 2000);
 }
-
 function confirmDialog(msg) {
   return new Promise(resolve => {
     document.getElementById('confirm-msg').textContent = msg;
@@ -152,16 +135,13 @@ function confirmDialog(msg) {
     document.getElementById('confirm-cancel').onclick = function() { closeConfirm(); resolve(false); };
   });
 }
-
 function closeConfirm() { document.getElementById('confirm-bg').classList.remove('active'); }
-
 function setFilter(status) {
   currentFilter = status;
   document.querySelectorAll('.filter-btn').forEach(b =>
     b.classList.toggle('active', b.getAttribute('data-status') === status));
   loadOrders(1);
 }
-
 async function loadOrders(page = 1) {
   currentPage = page;
   const url = currentFilter
@@ -170,12 +150,10 @@ async function loadOrders(page = 1) {
   const res = await fetch(url);
   const data = await res.json();
   const el = document.getElementById('orders-list');
-
   if (data.orders.length === 0) {
     el.innerHTML = '<div class="card" style="text-align:center;color:var(--text-secondary);padding:30px;">暂无订单</div>';
     return;
   }
-
   let html = '';
   data.orders.forEach(o => {
     const payInfo = o.payment_method
@@ -195,7 +173,6 @@ async function loadOrders(page = 1) {
       </div>
     `;
   });
-
   if (data.pages > 1) {
     html += '<div style="display:flex;gap:8px;justify-content:center;margin:16px 0;">';
     for (let p = 1; p <= data.pages; p++) {
@@ -203,10 +180,8 @@ async function loadOrders(page = 1) {
     }
     html += '</div>';
   }
-
   el.innerHTML = html;
 }
-
 async function showDetail(oid) {
   detailOrderId = oid;
   const res = await fetch(`/api/orders/${oid}`);
@@ -214,12 +189,10 @@ async function showDetail(oid) {
   const o = data.order;
   const items = data.items;
   const payments = data.payments || [];
-
   const statusBadge = STATUS_BADGES[o.status] || '<span class="badge">'+o.status+'</span>';
   const payInfo = o.payment_method
     ? `<span style="font-size:13px;">${PAY_ICON_HTML[o.payment_method]||''} ${PAY_NAMES[o.payment_method]||o.payment_method}</span>`
     : '';
-
   let html = `
     <div style="margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -245,7 +218,6 @@ async function showDetail(oid) {
       合计: ¥${o.total_amount.toFixed(2)} (${o.item_count}件)
     </div>
   `;
-
   // Payment history
   if (payments.length > 0) {
     html += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:13px;"><div style="font-weight:600;margin-bottom:4px;">💳 支付记录</div>';
@@ -254,23 +226,19 @@ async function showDetail(oid) {
     });
     html += '</div>';
   }
-
   document.getElementById('detail-content').innerHTML = html;
   document.getElementById('edit-note').value = o.note || '';
   document.getElementById('detail-bg').classList.add('active');
-
   // Show/hide buttons
   document.getElementById('btn-pay-now').style.display = o.status === 'pending' ? 'inline-block' : 'none';
   document.getElementById('btn-refund').style.display = o.status === 'paid' ? 'inline-block' : 'none';
   document.getElementById('btn-complete').style.display = o.status === 'paid' ? 'inline-block' : 'none';
   document.getElementById('btn-delete').style.display = 'inline-block';
 }
-
 function closeDetail() {
   document.getElementById('detail-bg').classList.remove('active');
   detailOrderId = null;
 }
-
 async function saveNote() {
   if (!detailOrderId) return;
   const note = document.getElementById('edit-note').value.trim();
@@ -283,7 +251,6 @@ async function saveNote() {
   if (data.ok) { toast('✅ 备注已保存'); loadOrders(currentPage); }
   else { toast('❌ ' + (data.error || '保存失败')); }
 }
-
 async function refundOrder() {
   if (!detailOrderId) return;
   const ok = await confirmDialog('确定退款该订单？商品库存将自动恢复。');
@@ -293,7 +260,6 @@ async function refundOrder() {
   if (data.ok) { toast('✅ 已退款'); closeDetail(); loadOrders(currentPage); }
   else { toast('❌ ' + (data.error || '退款失败')); }
 }
-
 async function completeOrder() {
   if (!detailOrderId) return;
   const ok = await confirmDialog('确定标记该订单为「已完成」？确认商品已交付给顾客。');
@@ -303,7 +269,6 @@ async function completeOrder() {
   if (data.ok) { toast('✅ 订单已完成'); closeDetail(); loadOrders(currentPage); }
   else { toast('❌ ' + (data.error || '操作失败')); }
 }
-
 async function deleteOrder() {
   if (!detailOrderId) return;
   const ok = await confirmDialog('确定永久删除该订单？此操作不可撤销！库存将自动恢复。');
@@ -313,7 +278,6 @@ async function deleteOrder() {
   if (data.ok) { toast('🗑 已删除'); closeDetail(); loadOrders(currentPage); }
   else { toast('❌ ' + (data.error || '删除失败')); }
 }
-
 // ── Pay Now (from orders page, for pending orders) ──────────
 function payNow() {
   const oid = detailOrderId;
@@ -325,7 +289,6 @@ function payNow() {
     loadPayNowDetail();
   }, 200);
 }
-
 async function loadPayNowDetail() {
   if (!payNowOrderId) return;
   const res = await fetch(`/api/orders/${payNowOrderId}`);
@@ -339,7 +302,6 @@ async function loadPayNowDetail() {
   document.getElementById('pay-now-summary').innerHTML = html;
   document.getElementById('pay-now-total').value = o.total_amount;
 }
-
 function selectPayNowMethod(method) {
   payNowMethod = method;
   document.querySelectorAll('#pay-now-bg .pay-method').forEach(el =>
@@ -357,7 +319,6 @@ function selectPayNowMethod(method) {
     document.getElementById('btn-pay-now-confirm').disabled = false;
   }
 }
-
 function calcPayNowChange() {
   const total = parseFloat(document.querySelector('#pay-now-summary div:last-child').textContent.replace(/[^0-9.]/g,'')) || 0;
   const paid = parseFloat(document.getElementById('pay-now-cash-input').value) || 0;
@@ -368,7 +329,6 @@ function calcPayNowChange() {
   } else { changeEl.style.display = 'none'; }
   updatePayNowBtn();
 }
-
 function updatePayNowBtn() {
   const total = parseFloat(document.querySelector('#pay-now-summary div:last-child').textContent.replace(/[^0-9.]/g,'')) || 0;
   const btn = document.getElementById('btn-pay-now-confirm');
@@ -379,18 +339,15 @@ function updatePayNowBtn() {
     btn.disabled = false;
   } else { btn.disabled = true; }
 }
-
 function closePayNow() {
   document.getElementById('pay-now-bg').classList.remove('active');
   payNowMethod = '';
   payNowOrderId = null;
 }
-
 async function confirmPayNow() {
   if (!payNowOrderId || !payNowMethod) return;
   const btn = document.getElementById('btn-pay-now-confirm');
   btn.disabled = true; btn.textContent = '⏳ 处理中...';
-
   const total = parseFloat(document.querySelector('#pay-now-summary div:last-child').textContent.replace(/[^0-9.]/g,'')) || 0;
   let paidAmount = total;
   if (payNowMethod === 'cash') {
@@ -401,7 +358,6 @@ async function confirmPayNow() {
       return;
     }
   }
-
   try {
     const res = await fetch(`/api/orders/${payNowOrderId}/pay`, {
       method: 'POST',
@@ -414,11 +370,9 @@ async function confirmPayNow() {
       toast(`✅ 收款成功！订单 #${payNowOrderId} ¥${data.total.toFixed(2)}`);
     }
   } catch(e) { toast('❌ 网络错误'); }
-
   closePayNow();
   loadOrders(currentPage);
 }
-
 loadOrders();
 </script>
 <script>
