@@ -1022,15 +1022,18 @@ def redeem_ticket():
     uid = data.get('uuid','').strip()
     if not uid: return jsonify({'error':'请输入UUID'}), 400
     conn = get_db()
-    # Support partial match (prefix)
-    row = conn.execute("SELECT * FROM tickets WHERE uuid=? OR uuid LIKE ?",(uid, uid+'%')).fetchone()
+    # Exact match first
+    row = conn.execute("SELECT * FROM tickets WHERE uuid=?",(uid,)).fetchone()
+    # Partial match — find first unused
     if not row:
-        conn.close(); return jsonify({'error':'无效UUID — 该纸条不存在'}), 400
+        row = conn.execute("SELECT * FROM tickets WHERE uuid LIKE ? AND used=0 LIMIT 1",(uid+'%',)).fetchone()
+    if not row:
+        conn.close(); return jsonify({'error':'无效UUID — 该纸条不存在或已被兑换'}), 400
     if row['used']:
-        conn.close(); return jsonify({'error':'已兑过 — 该纸条已在 '+row.get('created_at','')+' 被兑换'}), 400
-    conn.execute("UPDATE tickets SET used=1 WHERE uuid=?",(uid,))
+        conn.close(); return jsonify({'error':'已兑过 — 该纸条已被兑换'}), 400
+    conn.execute("UPDATE tickets SET used=1 WHERE uuid=?",(row['uuid'],))
     conn.commit(); conn.close()
-    return jsonify({'ok':True,'type':row['type'],'uuid':uid,'message':'✅ 兑换成功：'+row['type']})
+    return jsonify({'ok':True,'type':row['type'],'uuid':row['uuid'],'message':'✅ 兑换成功：'+row['type']})
 
 @app.route('/api/tickets/clear', methods=['POST'])
 def clear_tickets():
