@@ -7,12 +7,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1e1b4b">
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>抽奖兑换 - Store POS</title><style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='visible'"><script>
-(function(){var c=0,t=0;document.querySelector('.header h1').addEventListener('click',function(){var n=Date.now();if(n-t<400){c++;if(c>=2){c=0;var d=document.documentElement;if(d.requestFullscreen){d.requestFullscreen().catch(function(){})}else if(d.webkitRequestFullscreen){d.webkitRequestFullscreen()}}}else{c=1}t=n})})();
-</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>抽奖兑换 - Store POS</title><style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='visible'">
 </head>
 <body style="visibility:hidden">
-<button onclick="toggleFS()" style="position:fixed;top:8px;right:8px;z-index:999;background:rgba(124,58,237,0.8);color:#fff;border:none;border-radius:8px;padding:4px 8px;font-size:16px;cursor:pointer;backdrop-filter:blur(4px);">⛶</button>
+
+<button onclick="toggleFS()" style="position:fixed;top:8px;right:8px;z-index:999;background:rgba(124,58,237,0.8);color:#fff;border:none;border-radius:8px;padding:4px 8px;font-size:16px;cursor:pointer;">⛶</button>
 <div class="header"><h1>🎟 抽奖兑换</h1><div class="sub"><a href="/lucky" style="color:rgba(255,255,255,0.8);text-decoration:none;">← 返回抽奖</a></div></div>
 <div class="container">
   <div class="card"><h3>🖨 生成纸条</h3>
@@ -85,9 +84,7 @@ function printTickets(){
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1e1b4b">
 
-<style>@page{size:A4;margin:8mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:"PingFang SC",sans-serif}.grid{display:flex;flex-wrap:wrap;gap:2mm;justify-content:flex-start}.t{width:40mm;height:20mm;border:0.5mm dashed #999;border-radius:2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden}.t b{font-size:7mm;line-height:1;margin-bottom:1mm}.uuid{font-size:2.2mm;font-family:monospace;line-height:1.1;word-break:break-all;padding:0 1mm}</style><script>
-(function(){var c=0,t=0;document.querySelector('.header h1').addEventListener('click',function(){var n=Date.now();if(n-t<400){c++;if(c>=2){c=0;var d=document.documentElement;if(d.requestFullscreen){d.requestFullscreen().catch(function(){})}else if(d.webkitRequestFullscreen){d.webkitRequestFullscreen()}}}else{c=1}t=n})})();
-</script>
+<style>@page{size:A4;margin:8mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:"PingFang SC",sans-serif}.grid{display:flex;flex-wrap:wrap;gap:2mm;justify-content:flex-start}.t{width:40mm;height:20mm;border:0.5mm dashed #999;border-radius:2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden}.t b{font-size:7mm;line-height:1;margin-bottom:1mm}.uuid{font-size:2.2mm;font-family:monospace;line-height:1.1;word-break:break-all;padding:0 1mm}</style>
 </head><body><div class="grid">';
   lastGenerated.forEach(function(t,i){
     h+='<div class="t" style="background:'+(t.type==='薯'?'#fef3c7':t.type==='片'?'#dbeafe':'#fce7f3')+'"><b>'+t.type+'</b><span class="uuid">'+t.uuid+'</span></div>';
@@ -102,5 +99,6 @@ async function confirmClear(){
   toast('已清空');loadTickets();
 }
 loadTickets();
-</script><script>var _fs=!1;function toggleFS(){_fs=!_fs;var e=document.documentElement;if(_fs){e.requestFullscreen&&e.requestFullscreen().catch(function(){_fs=!_fs})}else{document.fullscreenElement&&document.exitFullscreen&&document.exitFullscreen()}}</script>
+</script>
+<script>var _fs=!1;function toggleFS(){_fs=!_fs;var e=document.documentElement;if(_fs){e.requestFullscreen&&e.requestFullscreen().catch(function(){_fs=!_fs})}else{document.fullscreenElement&&document.exitFullscreen&&document.exitFullscreen()}}</script>
 </body></html>
