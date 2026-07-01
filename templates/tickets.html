@@ -1,19 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8">
-<link rel="icon" href="/icon-192.png">
-<link rel="apple-touch-icon" href="/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1e1b4b">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>抽奖兑换 - Store POS</title><style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='visible'"><script>
-(function(){var c=0,t=0;document.querySelector('.header h1').addEventListener('click',function(){var n=Date.now();if(n-t<400){c++;if(c>=2){c=0;var d=document.documentElement;if(d.requestFullscreen){d.requestFullscreen().catch(function(){})}else if(d.webkitRequestFullscreen){d.webkitRequestFullscreen()}}}else{c=1}t=n})})();
-</script>
-</head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>抽奖兑换 - Store POS</title><style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='visible'"></head>
 <body style="visibility:hidden">
 <div class="header"><h1>🎟 抽奖兑换</h1><div class="sub"><a href="/lucky" style="color:rgba(255,255,255,0.8);text-decoration:none;">← 返回抽奖</a></div></div>
 <div class="container">
+
   <div class="card"><h3>🖨 生成纸条</h3>
     <div style="display:flex;gap:8px;align-items:center;">
       <input class="form-input" id="gen-count" type="number" min="1" max="100" value="20" style="width:80px;text-align:center;">
@@ -22,6 +13,7 @@
     </div>
     <div id="ticket-sheet" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:4px;max-height:240px;overflow-y:auto;"></div>
   </div>
+
   <div class="card"><h3>🔍 核销纸条</h3>
     <div style="display:flex;gap:8px;">
       <input class="form-input" id="redeem-uuid" placeholder="输入UUID（支持前缀匹配）" style="flex:1;font-family:monospace;">
@@ -29,6 +21,7 @@
     </div>
     <div id="redeem-result" style="margin-top:8px;font-size:14px;min-height:24px;"></div>
   </div>
+
   <div class="card"><h3>📋 纸条记录</h3>
     <div style="display:flex;gap:6px;margin-bottom:8px;">
       <button class="btn btn-sm" onclick="loadTickets()">刷新</button>
@@ -36,15 +29,19 @@
     </div>
     <div id="ticket-list" style="max-height:400px;overflow-y:auto;font-size:12px;"></div>
   </div>
+
 </div>
 <div class="toast" id="toast"></div>
-<div class="version-badge">v2.4.2</div>
+<div class="version-badge">v2.4.1</div>
+
 <!-- Confirm Modal -->
 <div class="modal-bg" id="confirm-bg"><div class="modal" style="text-align:center;max-width:320px;"><h2>⚠️ 确认</h2><p id="confirm-msg" style="color:var(--text-secondary);margin-bottom:12px;"></p><div class="btn-row"><button class="btn btn-ghost" id="confirm-cancel">取消</button><button class="btn btn-danger" id="confirm-ok">确定</button></div></div></div>
+
 <script>
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.className='toast show';setTimeout(function(){t.className='toast'},2000);}
 function customConfirm(msg){return new Promise(function(r){document.getElementById('confirm-msg').textContent=msg;document.getElementById('confirm-bg').classList.add('active');document.getElementById('confirm-ok').onclick=function(){document.getElementById('confirm-bg').classList.remove('active');r(true)};document.getElementById('confirm-cancel').onclick=function(){document.getElementById('confirm-bg').classList.remove('active');r(false)}})}
 var lastGenerated=[];
+
 async function generateTickets(){
   var n=parseInt(document.getElementById('gen-count').value)||20;
   var r=await fetch('/api/tickets/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({count:n})});
@@ -58,6 +55,7 @@ async function generateTickets(){
   toast('✅ 生成 '+d.count+' 张纸条');
   loadTickets();
 }
+
 async function loadTickets(){
   var r=await fetch('/api/tickets');
   var d=await r.json();
@@ -65,6 +63,7 @@ async function loadTickets(){
     return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span><b style="color:'+(t.type==='薯'?'#d97706':t.type==='片'?'#2563eb':'#db2777')+';">'+t.type+'</b> <span style="font-family:monospace;font-size:10px;">'+t.uuid.slice(0,12)+'</span></span><span>'+(t.used?'✅ 已兑':'⏳ 未兑')+'</span></div>';
   }).join(''):'<div style="color:var(--text-secondary);text-align:center;padding:12px;">暂无纸条</div>';
 }
+
 async function redeemTicket(){
   var uid=document.getElementById('redeem-uuid').value.trim();
   var el=document.getElementById('redeem-result');
@@ -75,25 +74,17 @@ async function redeemTicket(){
   else{el.innerHTML='<span style="color:var(--success);font-weight:700;">🎉 '+d.message+'</span>';document.getElementById('redeem-uuid').value=''}
   loadTickets();
 }
+
 function printTickets(){
   if(!lastGenerated.length){toast('请先生成纸条');return}
-  var h='<!DOCTYPE html><html><head><meta charset="UTF-8">
-<link rel="icon" href="/icon-192.png">
-<link rel="apple-touch-icon" href="/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1e1b4b">
-
-<style>@page{size:A4;margin:8mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:"PingFang SC",sans-serif}.grid{display:flex;flex-wrap:wrap;gap:2mm;justify-content:flex-start}.t{width:40mm;height:20mm;border:0.5mm dashed #999;border-radius:2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden}.t b{font-size:7mm;line-height:1;margin-bottom:1mm}.uuid{font-size:2.2mm;font-family:monospace;line-height:1.1;word-break:break-all;padding:0 1mm}</style><script>
-(function(){var c=0,t=0;document.querySelector('.header h1').addEventListener('click',function(){var n=Date.now();if(n-t<400){c++;if(c>=2){c=0;var d=document.documentElement;if(d.requestFullscreen){d.requestFullscreen().catch(function(){})}else if(d.webkitRequestFullscreen){d.webkitRequestFullscreen()}}}else{c=1}t=n})})();
-</script>
-</head><body><div class="grid">';
+  var h='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:A4;margin:8mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:"PingFang SC",sans-serif}.grid{display:flex;flex-wrap:wrap;gap:2mm;justify-content:flex-start}.t{width:40mm;height:20mm;border:0.5mm dashed #999;border-radius:2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden}.t b{font-size:7mm;line-height:1;margin-bottom:1mm}.uuid{font-size:2.2mm;font-family:monospace;line-height:1.1;word-break:break-all;padding:0 1mm}</style></head><body><div class="grid">';
   lastGenerated.forEach(function(t,i){
     h+='<div class="t" style="background:'+(t.type==='薯'?'#fef3c7':t.type==='片'?'#dbeafe':'#fce7f3')+'"><b>'+t.type+'</b><span class="uuid">'+t.uuid+'</span></div>';
   });
   h+='</div><script>window.onload=function(){window.print();window.close()}<\/script></body></html>';
   var w=window.open('','_blank');w.document.write(h);w.document.close();
 }
+
 async function confirmClear(){
   var ok=await customConfirm('确定清空全部纸条？此操作不可撤销。');
   if(!ok)return;

@@ -2,7 +2,7 @@
 import os
 import sys
 from datetime import datetime, date, timedelta
-from flask import Flask, render_template, request, jsonify, Response, send_file
+from flask import Flask, render_template, request, jsonify, Response
 
 sys.path.insert(0, os.path.dirname(__file__))
 from models import get_db, init_db
@@ -10,12 +10,6 @@ from models import get_db, init_db
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 app.config['TEMPLATES_AUTO_RELOAD'] = True
-
-# Explicit static routes for files Flask might miss
-@app.route('/icon-192.png')
-def icon_192():
-    return send_file('static/icon-192.png')
-
 
 
 # ─── Initialize ────────────────────────────────────────────────

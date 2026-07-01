@@ -2,29 +2,22 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" href="/icon-192.png">
-<link rel="apple-touch-icon" href="/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1e1b4b">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>商品管理 - Store POS</title>
 <style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='visible'">
-<script>
-(function(){var c=0,t=0;document.querySelector('.header h1').addEventListener('click',function(){var n=Date.now();if(n-t<400){c++;if(c>=2){c=0;var d=document.documentElement;if(d.requestFullscreen){d.requestFullscreen().catch(function(){})}else if(d.webkitRequestFullscreen){d.webkitRequestFullscreen()}}}else{c=1}t=n})})();
-</script>
 </head>
 <body style="visibility:hidden">
 <div class="header">
   <h1>📦 商品管理</h1>
   <div class="sub">管理商品信息与库存</div>
 </div>
+
 <div class="container">
   <button class="btn btn-primary btn-block" onclick="openAdd()">＋ 新增商品</button>
   <div style="margin-top:12px;" id="products-list"></div>
   <button class="btn btn-accent btn-block" id="btn-save-order" style="display:none;margin-top:8px;" onclick="saveOrder()">💾 保存排序</button>
 </div>
+
 <nav class="tab-bar">
   <a href="/"><span class="icon">🧾</span>收银</a>
   <a href="/products" class="active"><span class="icon">📦</span>商品</a>
@@ -33,6 +26,7 @@
   <a href="/stats"><span class="icon">📊</span>统计</a>
   <a href="/lucky"><span class="icon">🎰</span>抽奖</a>
 </nav>
+
 <!-- Modal -->
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
@@ -79,9 +73,11 @@
     </div>
   </div>
 </div>
+
 <!-- Toast -->
-<div class="version-badge">v2.4.2</div>
+<div class="version-badge">v2.4.1</div>
 <div class="toast" id="toast"></div>
+
 <!-- Confirm Modal -->
 <div class="modal-bg" id="confirm-bg">
   <div class="modal">
@@ -93,6 +89,7 @@
     </div>
   </div>
 </div>
+
 <!-- Options Modal -->
 <div class="modal-bg" id="opt-bg">
   <div class="modal" style="max-height:80vh;overflow-y:auto;">
@@ -106,15 +103,18 @@
     </div>
   </div>
 </div>
+
 <script>
 let editingId = null;
 let optProductId = null;
 let optData = [];
+
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast show';
   setTimeout(() => t.className = 'toast', 2000);
 }
+
 function confirmDialog(msg) {
   return new Promise(resolve => {
     document.getElementById('confirm-msg').textContent = msg;
@@ -125,7 +125,9 @@ function confirmDialog(msg) {
     cancelBtn.onclick = function() { closeConfirm(); resolve(false); };
   });
 }
+
 function closeConfirm() { document.getElementById('confirm-bg').classList.remove('active'); }
+
 function toggleCoupon() {
   const isCoupon = document.getElementById('f-is-coupon').checked;
   document.getElementById('coupon-section').style.display = isCoupon ? 'block' : 'none';
@@ -152,6 +154,7 @@ function updateCouponLabel() {
     label.textContent = '优惠券面值（减总额）';
   }
 }
+
 function updateDiscountInput() {
   const dt = document.getElementById('f-discount-type').value;
   const label = document.getElementById('f-discount-label');
@@ -177,6 +180,7 @@ function updateDiscountInput() {
   }
   input.value = '';
 }
+
 async function loadProducts() {
   const res = await fetch('/api/products');
   const products = await res.json();
@@ -184,6 +188,7 @@ async function loadProducts() {
   if (!window._orderOverride) window._orderOverride = null;
   renderOrderedProducts();
 }
+
 function openAdd() {
   editingId = null;
   document.getElementById('modal-title').textContent = '新增商品';
@@ -199,6 +204,7 @@ function openAdd() {
   toggleCoupon();
   document.getElementById('modal-bg').classList.add('active');
 }
+
 function editProduct(id) {
   editingId = id;
   document.getElementById('modal-title').textContent = '编辑商品';
@@ -218,9 +224,11 @@ function editProduct(id) {
     document.getElementById('modal-bg').classList.add('active');
   });
 }
+
 function closeModal() {
   document.getElementById('modal-bg').classList.remove('active');
 }
+
 async function saveProduct() {
   const name = document.getElementById('f-name').value.trim();
   let price = parseFloat(document.getElementById('f-price').value);
@@ -231,12 +239,15 @@ async function saveProduct() {
   const is_coupon = document.getElementById('f-is-coupon').checked;
   const coupon_mode = document.getElementById('f-coupon-mode').value;
   if (is_coupon) price = 0;
+
   if (!name) { toast('请输入商品名称'); return; }
   if (isNaN(price) || price < 0) { toast('请输入有效价格'); return; }
   if (discount < 0) { toast('折扣不能为负数'); return; }
   if (discount_type === 'percent' && discount > 100) { toast('百分比折扣不能超过 100%'); return; }
+
   const url = editingId ? `/api/products/${editingId}` : '/api/products';
   const method = editingId ? 'PUT' : 'POST';
+
   const res = await fetch(url, {
     method,
     headers: {'Content-Type': 'application/json'},
@@ -244,10 +255,12 @@ async function saveProduct() {
   });
   const data = await res.json();
   if (data.error) { toast('❌ ' + data.error); return; }
+
   toast(editingId ? '✅ 已更新' : '✅ 已新增');
   closeModal();
   loadProducts();
 }
+
 async function deleteProduct(id) {
   const confirmed = await confirmDialog('确定删除该商品吗？此操作不可撤销。');
   if (!confirmed) return;
@@ -255,8 +268,10 @@ async function deleteProduct(id) {
   const data = await res.json();
   if (data.ok) { toast('✅ 已删除'); loadProducts(); }
 }
+
 // ── Options Management ─────────────────────────────────────────
 function closeOptModal() { document.getElementById('opt-bg').classList.remove('active'); }
+
 function manageOptions(pid, name) {
   optProductId = pid;
   document.getElementById('opt-title').textContent = `⚙️ ${name} — 选项配置`;
@@ -268,6 +283,7 @@ function manageOptions(pid, name) {
       document.getElementById('opt-bg').classList.add('active');
     });
 }
+
 function renderOptionGroups(groups) {
   const el = document.getElementById('opt-groups');
   if (groups.length === 0) {
@@ -300,6 +316,7 @@ function renderOptionGroups(groups) {
     </div>
   `).join('');
 }
+
 function addOptionGroup() {
   optData.push({ group_name: '', multi_select: false, options: [{ option_name: '', price_adjustment: 0 }] });
   renderOptionGroups(optData);
@@ -307,6 +324,7 @@ function addOptionGroup() {
 function removeOptionGroup(gi) { optData.splice(gi, 1); renderOptionGroups(optData); }
 function addOption(gi) { optData[gi].options.push({ option_name: '', price_adjustment: 0 }); renderOptionGroups(optData); }
 function removeOption(gi, oi) { optData[gi].options.splice(oi, 1); renderOptionGroups(optData); }
+
 async function saveOptions() {
   for (const g of optData) {
     if (!g.group_name.trim()) { toast('❌ 选项组名称不能为空'); return; }
@@ -323,8 +341,10 @@ async function saveOptions() {
   if (data.ok) { toast('✅ 选项已保存'); closeOptModal(); }
   else { toast('❌ 保存失败'); }
 }
+
 loadProducts();
 let productOrder = [];
+
 function moveProduct(idx, dir) {
   const products = window._orderOverride || productOrder;
   const newIdx = idx + dir;
@@ -334,6 +354,7 @@ function moveProduct(idx, dir) {
   document.getElementById('btn-save-order').style.display = 'block';
   renderOrderedProducts();
 }
+
 function renderOrderedProducts() {
   const products = window._orderOverride || productOrder;
   const el = document.getElementById('products-list');
@@ -346,6 +367,7 @@ function renderOrderedProducts() {
     return '<div class="card" style="display:flex;align-items:start;gap:8px;"><div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;min-width:28px;"><button class="btn btn-sm" style="padding:2px 6px;font-size:10px;line-height:1;" onclick="moveProduct('+i+',-1)" '+(i===0?'disabled':'')+'>▲</button><span style="font-size:14px;color:var(--text-muted);">☰</span><button class="btn btn-sm" style="padding:2px 6px;font-size:10px;line-height:1;" onclick="moveProduct('+i+',1)" '+(i===products.length-1?'disabled':'')+'>▼</button></div><div style="flex:1;"><div style="display:flex;justify-content:space-between;align-items:start;"><div><div style="font-weight:600;font-size:15px;">'+p.name+'</div><div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">'+(p.category?p.category+' · ':'')+'库存: '+p.stock+'</div></div><div style="text-align:right;"><div style="font-size:18px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap;">'+(hasDiscount?'<span style="text-decoration:line-through;color:var(--text-muted);font-size:13px;font-weight:400;">¥'+p.price.toFixed(2)+'</span> ':'')+'<span>¥'+finalPrice.toFixed(2)+'</span>'+discountBadge+'</div><div style="margin-top:8px;display:flex;gap:6px;justify-content:end;"><button class="btn btn-sm btn-ghost" onclick="editProduct('+p.id+')">编辑</button><button class="btn btn-sm" style="background:#eef2ff;color:#6366f1;" onclick="manageOptions('+p.id+',\''+p.name.replace(/\x27/g,'\\\x27')+'\')">选项</button><button class="btn btn-sm btn-danger" onclick="deleteProduct('+p.id+')">删除</button></div></div></div></div></div>';
   }).join('');
 }
+
 async function saveOrder() {
   const products = window._orderOverride || productOrder;
   const ids = products.map(p => p.id);
@@ -354,6 +376,7 @@ async function saveOrder() {
   if (data.ok) { toast('✅ 排序已保存'); document.getElementById('btn-save-order').style.display='none'; window._orderOverride=null; loadProducts(); }
   else toast('❌ 保存失败');
 }
+
 </script>
 <script>
 (function(){document.body.addEventListener('click',function(e){var t=e.target.closest('button');if(!t||t.disabled)return;try{var a=new(window.AudioContext||window.webkitAudioContext)();a.resume();var o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=800;g.gain.setValueAtTime(0.03,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+0.04);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+0.04)}catch(e){}})})();

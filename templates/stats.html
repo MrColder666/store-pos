@@ -2,30 +2,23 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" href="/icon-192.png">
-<link rel="apple-touch-icon" href="/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1e1b4b">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>今日统计 - Store POS</title>
 <style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='visible'">
-<script>
-(function(){var c=0,t=0;document.querySelector('.header h1').addEventListener('click',function(){var n=Date.now();if(n-t<400){c++;if(c>=2){c=0;var d=document.documentElement;if(d.requestFullscreen){d.requestFullscreen().catch(function(){})}else if(d.webkitRequestFullscreen){d.webkitRequestFullscreen()}}}else{c=1}t=n})})();
-</script>
 </head>
 <body style="visibility:hidden">
 <div class="header">
   <h1>📊 今日统计</h1>
   <div class="sub" id="today-label">加载中...</div>
 </div>
+
 <div class="container">
   <div class="stat-grid" id="stat-cards">
     <div class="stat-card"><div class="num" id="stat-orders">-</div><div class="label">订单数</div></div>
     <div class="stat-card"><div class="num" id="stat-revenue">-</div><div class="label">营收</div></div>
     <div class="stat-card"><div class="num" id="stat-items">-</div><div class="label">售出件数</div></div>
   </div>
+
   <!-- Payment Method Breakdown -->
   <div class="card">
     <h3>💳 支付方式</h3>
@@ -44,19 +37,23 @@
       </div>
     </div>
   </div>
+
   <!-- Pending Orders -->
   <div class="card" id="pending-card" style="display:none;">
     <h3>⏳ 待支付订单</h3>
     <div id="pending-orders"></div>
   </div>
+
   <div class="card">
     <h3>🏆 今日热销</h3>
     <div id="top-products"><div style="color:var(--text-secondary);font-size:14px;">暂无数据</div></div>
   </div>
+
   <div class="card">
     <h3>⏱ 最近订单</h3>
     <div id="recent-orders"><div style="color:var(--text-secondary);font-size:14px;">暂无数据</div></div>
   </div>
+
   <div style="display:flex;gap:8px;margin-top:4px;">
     <a href="/weekly" class="btn btn-primary" style="flex:1;text-decoration:none;text-align:center;">
       📈 本周详细
@@ -69,6 +66,7 @@
     </a>
   </div>
 </div>
+
 <nav class="tab-bar">
   <a href="/"><span class="icon">🧾</span>收银</a>
   <a href="/products"><span class="icon">📦</span>商品</a>
@@ -77,20 +75,24 @@
   <a href="/stats" class="active"><span class="icon">📊</span>统计</a>
   <a href="/lucky"><span class="icon">🎰</span>抽奖</a>
 </nav>
+
 <script>
 async function loadStats() {
   const res = await fetch('/api/stats/today');
   const d = await res.json();
+
   document.getElementById('today-label').textContent = d.date;
   document.getElementById('stat-orders').textContent = d.order_count;
   document.getElementById('stat-revenue').textContent = '¥' + d.revenue.toFixed(2);
   document.getElementById('stat-items').textContent = d.items_sold;
+
   // Payment breakdown
   const payMap = { cash: 0, wechat: 0, alipay: 0 };
   d.payment_breakdown.forEach(p => { payMap[p.method] = p.total; });
   document.getElementById('pay-cash').textContent = '¥' + (payMap.cash || 0).toFixed(2);
   document.getElementById('pay-wechat').textContent = '¥' + (payMap.wechat || 0).toFixed(2);
   document.getElementById('pay-alipay').textContent = '¥' + (payMap.alipay || 0).toFixed(2);
+
   // Pending orders
   const pendingEl = document.getElementById('pending-orders');
   const pendingCard = document.getElementById('pending-card');
@@ -105,6 +107,7 @@ async function loadStats() {
   } else {
     pendingCard.style.display = 'none';
   }
+
   // Top products
   const topEl = document.getElementById('top-products');
   if (d.top_products.length === 0) {
@@ -117,6 +120,7 @@ async function loadStats() {
       </div>
     `).join('');
   }
+
   // Recent orders
   const recentEl = document.getElementById('recent-orders');
   if (d.recent_orders.length === 0) {
@@ -135,9 +139,10 @@ async function loadStats() {
     }).join('');
   }
 }
+
 loadStats();
 </script>
-<div class="version-badge">v2.4.2</div>
+<div class="version-badge">v2.4.1</div>
 <script>
 (function(){document.body.addEventListener('click',function(e){var t=e.target.closest('button');if(!t||t.disabled)return;try{var a=new(window.AudioContext||window.webkitAudioContext)();a.resume();var o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=800;g.gain.setValueAtTime(0.03,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+0.04);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+0.04)}catch(e){}})})();
 </script>

@@ -2,24 +2,16 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" href="/icon-192.png">
-<link rel="apple-touch-icon" href="/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1e1b4b">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>每周收益 - Store POS</title>
 <style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='visible'">
-<script>
-(function(){var c=0,t=0;document.querySelector('.header h1').addEventListener('click',function(){var n=Date.now();if(n-t<400){c++;if(c>=2){c=0;var d=document.documentElement;if(d.requestFullscreen){d.requestFullscreen().catch(function(){})}else if(d.webkitRequestFullscreen){d.webkitRequestFullscreen()}}}else{c=1}t=n})})();
-</script>
 </head>
 <body style="visibility:hidden">
 <div class="header">
   <h1>📈 每周收益明细</h1>
   <div class="sub" id="week-label">本周</div>
 </div>
+
 <div class="container">
   <!-- Summary Cards -->
   <div class="stat-grid">
@@ -27,6 +19,7 @@
     <div class="stat-card"><div class="num" id="w-orders">-</div><div class="label">总订单</div></div>
     <div class="stat-card"><div class="num" id="w-items">-</div><div class="label">售出件数</div></div>
   </div>
+
   <!-- Daily Revenue Bar Chart -->
   <div class="card">
     <h3>📊 每日营收</h3>
@@ -35,11 +28,13 @@
       🖼️ 导出图表为 PNG
     </a>
   </div>
+
   <!-- Hourly Distribution -->
   <div class="card">
     <h3>🕐 时段分布（订单数）</h3>
     <div class="hour-chart" id="hour-chart"></div>
   </div>
+
   <!-- Daily Breakdown Table -->
   <div class="card">
     <h3>📅 每日明细</h3>
@@ -49,16 +44,19 @@
       </table>
     </div>
   </div>
+
   <!-- Order Timeline -->
   <div class="card">
     <h3>📋 本周订单时间线</h3>
     <div id="order-timeline"></div>
   </div>
+
   <!-- Export -->
   <a href="/api/export/weekly.csv" class="btn btn-primary btn-block" style="text-decoration:none;text-align:center;margin-bottom:12px;" download>
     📥 导出本周数据 CSV
   </a>
 </div>
+
 <nav class="tab-bar">
   <a href="/"><span class="icon">🧾</span>收银</a>
   <a href="/products"><span class="icon">📦</span>商品</a>
@@ -67,22 +65,28 @@
   <a href="/stats" class="active"><span class="icon">📊</span>统计</a>
   <a href="/lucky"><span class="icon">🎰</span>抽奖</a>
 </nav>
+
 <div class="toast" id="toast"></div>
+
 <script>
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast show';
   setTimeout(() => t.className = 'toast', 2000);
 }
+
 async function loadWeekly() {
   const res = await fetch('/api/stats/weekly');
   const d = await res.json();
+
   // Week label
   document.getElementById('week-label').textContent = `${d.week_start} ~ ${d.week_end}`;
+
   // Summary
   document.getElementById('w-revenue').textContent = '¥' + d.total_revenue.toFixed(2);
   document.getElementById('w-orders').textContent = d.total_orders;
   document.getElementById('w-items').textContent = d.total_items;
+
   // ── Daily Bar Chart ──
   const dailyValues = d.daily.map(day => day.revenue);
   const maxRevenue = Math.max(...dailyValues, 1);
@@ -99,6 +103,7 @@ async function loadWeekly() {
       </div>
     `;
   }).join('');
+
   // ── Hourly Distribution ──
   const hours = {};
   for (let h = 0; h < 24; h++) hours[h] = 0;
@@ -115,6 +120,7 @@ async function loadWeekly() {
       </div>
     `;
   }).join('');
+
   // ── Daily Table ──
   const dayNamesFull = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
   const tableEl = document.getElementById('daily-table');
@@ -140,12 +146,14 @@ async function loadWeekly() {
     </tr>
   `;
   tableEl.innerHTML = tableHtml;
+
   // ── Order Timeline ──
   const timelineEl = document.getElementById('order-timeline');
   if (d.orders.length === 0) {
     timelineEl.innerHTML = '<div style="color:var(--text-secondary);font-size:14px;padding:16px 0;">本周暂无订单</div>';
     return;
   }
+
   timelineEl.innerHTML = '<div class="timeline">' + d.orders.map(o => {
     const itemsList = o.items.map(i => `${i.product_name}×${i.quantity}`).join('、');
     return `
@@ -158,9 +166,10 @@ async function loadWeekly() {
     `;
   }).join('') + '</div>';
 }
+
 loadWeekly();
 </script>
-<div class="version-badge">v2.4.2</div>
+<div class="version-badge">v2.4.1</div>
 <script>
 (function(){document.body.addEventListener('click',function(e){var t=e.target.closest('button');if(!t||t.disabled)return;try{var a=new(window.AudioContext||window.webkitAudioContext)();a.resume();var o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=800;g.gain.setValueAtTime(0.03,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+0.04);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+0.04)}catch(e){}})})();
 </script>

@@ -2,12 +2,6 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" href="/icon-192.png">
-<link rel="apple-touch-icon" href="/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1e1b4b">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>幸运大转盘 - Store POS</title>
 <style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='visible'">
@@ -46,15 +40,13 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
 .result-modal .prize-name { font-size:24px; font-weight:700; color:var(--primary); margin:8px 0; }
 .result-modal .btn { margin-top:12px; }
 </style>
-<script>
-(function(){var c=0,t=0;document.querySelector('.header h1').addEventListener('click',function(){var n=Date.now();if(n-t<400){c++;if(c>=2){c=0;var d=document.documentElement;if(d.requestFullscreen){d.requestFullscreen().catch(function(){})}else if(d.webkitRequestFullscreen){d.webkitRequestFullscreen()}}}else{c=1}t=n})})();
-</script>
 </head>
 <body style="visibility:hidden">
 <div class="header">
   <h1>🎰 幸运大转盘</h1>
   <div class="sub">中奖概率透明，无套路！</div>
 </div>
+
 <div class="lucky-container">
   <div class="row-main">
     <!-- 左侧转盘 -->
@@ -77,6 +69,7 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
         </div>
       </div>
     </div>
+
     <!-- 右侧面板 -->
     <div class="info-panel">
       <div class="section-title">📊 中奖概率 <span class="badge-transparent">透明公开</span></div>
@@ -102,6 +95,7 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
     </div>
   </div>
 </div>
+
 <nav class="tab-bar">
   <a href="/"><span class="icon">🧾</span>收银</a>
   <a href="/products"><span class="icon">📦</span>商品</a>
@@ -110,8 +104,10 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
   <a href="/stats"><span class="icon">📊</span>统计</a>
   <a href="/lucky" class="active"><span class="icon">🎰</span>抽奖</a>
 </nav>
+
 <div class="toast" id="toast"></div>
-<div class="version-badge">v2.4.2</div>
+<div class="version-badge">v2.4.1</div>
+
 <!-- Admin Modal -->
 <div class="modal-bg" id="admin-bg">
   <div class="modal" style="text-align:center;max-width:360px;">
@@ -125,6 +121,7 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
     <a href="/tickets" class="btn btn-accent" style="display:block;margin-top:8px;text-align:center;text-decoration:none;">🎟 抽奖兑换工具</a>
   </div>
 </div>
+
 <!-- Password Modal -->
 <div class="modal-bg" id="pw-bg">
   <div class="modal" style="text-align:center;max-width:360px;">
@@ -136,6 +133,7 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
     </div>
   </div>
 </div>
+
 <!-- Result Modal -->
 <div class="modal-bg" id="result-bg">
   <div class="modal result-modal" style="text-align:center;max-width:360px;">
@@ -145,8 +143,10 @@ canvas#wheelCanvas { width: 100%; height: 100%; display: block; border-radius: 5
     <button class="btn btn-primary btn-block" onclick="document.getElementById('result-bg').classList.remove('active')">🎯 再来一次</button>
   </div>
 </div>
+
 <script>
 function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t.className='toast show'; setTimeout(()=>t.className='toast',2000); }
+
 (function() {
   // ── Merged prize sectors (proportional to probability) ──
   const sectors = [
@@ -163,6 +163,7 @@ function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t
   // Build cumulative angles for spinning
   let cumulative = 0;
   sectors.forEach(s => { s.startAngle = cumulative; cumulative += (s.weight/totalWeight)*2*Math.PI; s.endAngle = cumulative; });
+
   // ── Probability list ──
   (function(){
     let html='';
@@ -171,6 +172,7 @@ function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t
     });
     document.getElementById('probabilityList').innerHTML = html;
   })();
+
   // ── Pie chart (same as wheel, smaller) ──
   (function(){
     const pc = document.getElementById('pieChart');
@@ -189,11 +191,13 @@ function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t
     });
     pctx.beginPath(); pctx.arc(px,py,pr*0.45,0,Math.PI*2); pctx.fillStyle='#fff'; pctx.fill();
   })();
+
   // ── Canvas wheel ──
   const canvas = document.getElementById('wheelCanvas');
   const ctx = canvas.getContext('2d');
   const W=600, H=600, cx=W/2, cy=H/2, radius=270;
   let currentRotation = 0, isSpinning = false;
+
   function drawWheel(rot) {
     ctx.clearRect(0, 0, W, H);
     let sa = rot - Math.PI/2; // start from top
@@ -204,27 +208,32 @@ function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t
       ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,radius,sa,ea); ctx.closePath();
       ctx.fillStyle = s.color; ctx.fill();
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke();
+
       // Text rotates WITH the sector — always points outward from center
       const mid = sa + sweep/2;
       const textR = radius * 0.55;
       const tx = cx + Math.cos(mid) * textR;
       const ty = cy + Math.sin(mid) * textR;
+
       ctx.save();
       ctx.translate(tx, ty);
       ctx.rotate(mid + Math.PI/2);  // align with radial direction
       ctx.fillStyle = '#fff';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+
       let label = s.name;
       const fontSize = sweep > 0.25 ? 22 : sweep > 0.15 ? 18 : 14;
       ctx.font = `bold ${fontSize}px "PingFang SC",sans-serif`;
       const charH = fontSize * 1.3;
       const totalH = label.length * charH;
       const startY = -totalH / 2 + charH / 2;
+
       for (let j = 0; j < label.length; j++) {
         ctx.fillText(label[j], 0, startY + j * charH);
       }
       ctx.restore();
+
       sa = ea;
     });
     // Center button
@@ -236,9 +245,11 @@ function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('抽奖',cx,cy);
   }
   drawWheel(currentRotation);
+
   // ── Spin logic (weighted random) ──
   const spinBtn = document.getElementById('spinButton');
   const resultDisplay = document.getElementById('resultDisplay');
+
   function pickPrize() {
     let r = Math.random() * totalWeight;
     for (let s of sectors) {
@@ -247,10 +258,12 @@ function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t
     }
     return sectors[sectors.length-1];
   }
+
   function spinWheel() {
     if (isSpinning) return;
     isSpinning = true; spinBtn.disabled = true;
     resultDisplay.innerHTML = '🎰 转动中...';
+
     const result = pickPrize();
     const sweep = (result.weight/totalWeight)*2*Math.PI;
     // At rotation rot, sector i is at the pointer (top) when:
@@ -260,10 +273,12 @@ function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t
     const minTurns = Math.ceil((currentRotation - stopAngle) / (2*Math.PI));
     const extraTurns = 5 + Math.floor(Math.random()*4);
     const target = stopAngle + (minTurns + extraTurns) * 2 * Math.PI;
+
     const start = currentRotation, totalDist = target - start;
     const duration = 1800+Math.random()*800;
     const startTime = performance.now();
     let lastTick = -1;
+
     function anim(time) {
       // Tick on each sector pass
       const sectorAngle = (currentRotation % (2*Math.PI) + 2*Math.PI) % (2*Math.PI);
@@ -318,9 +333,11 @@ function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t
     }
     requestAnimationFrame(anim);
   }
+
   spinBtn.addEventListener('click', spinWheel);
   canvas.addEventListener('click', spinWheel);
   canvas.addEventListener('touchstart', e => { e.preventDefault(); spinWheel(); });
+
   // ── Load count ──
   function loadCount() {
     fetch('/api/lucky/count').then(r=>r.json()).then(d => {
@@ -332,6 +349,7 @@ function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t
   }
   loadCount();
 })();
+
 // ── Admin flow ──
 function openAdmin() { document.getElementById('pw-input').value=''; document.getElementById('pw-bg').classList.add('active'); setTimeout(()=>document.getElementById('pw-input').focus(),100); }
 function closePw() { document.getElementById('pw-bg').classList.remove('active'); }
