@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
+<head><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>商品管理 - Store POS</title>
 <style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='visible'">
+<script>
+(function(){var c=0,t=0;document.querySelector('.header h1').addEventListener('click',function(){var n=Date.now();if(n-t<400){c++;if(c>=2){c=0;var d=document.documentElement;if(d.requestFullscreen){d.requestFullscreen().catch(function(){})}else if(d.webkitRequestFullscreen){d.webkitRequestFullscreen()}}}else{c=1}t=n})})();
+</script>
 </head>
 <body style="visibility:hidden">
 <div class="header">
@@ -75,7 +78,7 @@
 </div>
 
 <!-- Toast -->
-<div class="version-badge">v2.4.1</div>
+<div class="version-badge">v2.4.2</div>
 <div class="toast" id="toast"></div>
 
 <!-- Confirm Modal -->

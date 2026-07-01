@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>会员管理 - Store POS</title><style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='visible'"></head>
+<head><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>会员管理 - Store POS</title><style>body{visibility:hidden}</style><link rel="stylesheet" href="/static/style.css" onload="document.body.style.visibility='visible'"><script>
+(function(){var c=0,t=0;document.querySelector('.header h1').addEventListener('click',function(){var n=Date.now();if(n-t<400){c++;if(c>=2){c=0;var d=document.documentElement;if(d.requestFullscreen){d.requestFullscreen().catch(function(){})}else if(d.webkitRequestFullscreen){d.webkitRequestFullscreen()}}}else{c=1}t=n})})();
+</script>
+</head>
 <body style="visibility:hidden">
 <div class="header"><h1>👤 会员管理</h1><div class="sub">会员折扣 · 连续消费追踪</div></div>
 <div class="container">
@@ -28,7 +31,7 @@
 <!-- Confirm Modal -->
 <div class="modal-bg" id="confirm-bg"><div class="modal" style="text-align:center;"><h2>⚠️ 确认删除</h2><p style="color:var(--text-secondary);margin-bottom:12px;" id="confirm-msg"></p><div class="btn-row"><button class="btn btn-ghost" id="confirm-cancel">取消</button><button class="btn btn-danger" id="confirm-ok">删除</button></div></div></div>
 
-<div class="version-badge">v2.4.1</div>
+<div class="version-badge">v2.4.2</div>
 
 <script>
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.className='toast show';setTimeout(function(){t.className='toast'},2000);}
