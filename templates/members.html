@@ -5,6 +5,7 @@
 </script>
 </head>
 <body style="visibility:hidden">
+<button onclick="toggleFS()" style="position:fixed;top:8px;right:8px;z-index:999;background:rgba(124,58,237,0.8);color:#fff;border:none;border-radius:8px;padding:4px 8px;font-size:16px;cursor:pointer;backdrop-filter:blur(4px);">⛶</button>
 <div class="header"><h1>👤 会员管理</h1><div class="sub">会员折扣 · 连续消费追踪</div></div>
 <div class="container">
   <button class="btn btn-primary btn-block" onclick="openRegister()">＋ 注册会员</button>
@@ -46,4 +47,5 @@ async function loadMembers(){var r=await fetch('/api/members');var members=await
 
 async function deleteMember(id){var ok=await confirmDelete('确定删除该会员？此操作不可撤销。');if(!ok)return;await fetch('/api/members/'+id+'/delete',{method:'POST'});toast('✅ 已删除');loadMembers();}
 loadMembers();
-</script></body></html>
+</script><script>var _fs=!1;function toggleFS(){_fs=!_fs;var e=document.documentElement;if(_fs){e.requestFullscreen&&e.requestFullscreen().catch(function(){_fs=!_fs})}else{document.fullscreenElement&&document.exitFullscreen&&document.exitFullscreen()}}</script>
+</body></html>
