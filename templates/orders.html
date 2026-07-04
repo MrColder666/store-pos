@@ -178,6 +178,8 @@ async function loadOrders(page = 1) {
           <span style="font-size:17px;font-weight:700;color:var(--primary);">¥${o.total_amount.toFixed(2)}</span>
         </div>
         ${o.note ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">📝 ${o.note}</div>` : ''}
+        ${o.customer_name ? `<div style="font-size:12px;color:var(--accent);margin-top:2px;">👤 ${o.customer_name}</div>` : ''}
+        ${o.profit_share>0?`<div style="font-size:12px;color:var(--primary);margin-top:2px;">💰 分润 ¥${o.profit_share.toFixed(2)}</div>`:''}
       </div>
     `;
   });
