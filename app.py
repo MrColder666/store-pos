@@ -253,7 +253,7 @@ def create_order():
         if m and m['is_member']:
             total_spent = float(m['total_spent'] or 0)
             today = date.today().isoformat()
-            consec = m['consecutive_days'] or 1
+            consecutive = m['consecutive_days'] or 1
             # 88折: 连续3天 + 总消费 ≥ 20
             if consecutive >= 3 and total_spent >= 20:
                 member_discount = round(total * 0.12, 2)
