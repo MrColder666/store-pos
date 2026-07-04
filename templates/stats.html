@@ -18,6 +18,9 @@
     <div class="stat-card"><div class="num" id="stat-revenue">-</div><div class="label">营收</div></div>
     <div class="stat-card"><div class="num" id="stat-items">-</div><div class="label">售出件数</div></div>
     <div class="stat-card"><div class="num" id="stat-profit">-</div><div class="label">分润 (20%)</div></div>
+    <div class="stat-card"><div class="num" id="stat-avg">-</div><div class="label">客单价</div></div>
+    <div class="stat-card"><div class="num" id="stat-attach">-</div><div class="label">连带率</div></div>
+    <div class="stat-card"><div class="num" id="stat-repeat">-</div><div class="label">复购率</div></div>
   </div>
 
   <!-- Payment Method Breakdown -->
@@ -48,6 +51,8 @@
   <div class="card">
     <h3>🏆 今日热销</h3>
     <div id="top-products"><div style="color:var(--text-secondary);font-size:14px;">暂无数据</div></div>
+    <h3 style="margin-top:16px;">🔗 商品关联分析</h3>
+    <div id="associations"><div style="color:var(--text-secondary);font-size:13px;">买了X的人常买什么</div></div>
   </div>
 
   <div class="card">
@@ -87,6 +92,9 @@ async function loadStats() {
   document.getElementById('stat-revenue').textContent = '¥' + d.revenue.toFixed(2);
   document.getElementById('stat-items').textContent = d.items_sold;
   document.getElementById('stat-profit').textContent = '¥' + (d.profit_share||0).toFixed(2);
+  document.getElementById('stat-avg').textContent = '¥' + (d.avg_order||0).toFixed(2);
+  document.getElementById('stat-attach').textContent = (d.attach_rate||0).toFixed(1) + '件';
+  document.getElementById('stat-repeat').textContent = (d.repeat_rate||0) + '%';
 
   // Payment breakdown
   const payMap = { cash: 0, wechat: 0, alipay: 0 };
@@ -143,6 +151,16 @@ async function loadStats() {
 }
 
 loadStats();
+(async function(){
+  try{
+    var r=await fetch('/api/stats/associations');
+    var d=await r.json();
+    var el=document.getElementById('associations');
+    el.innerHTML=d.length?d.map(function(a){
+      return '<div style="padding:4px 0;border-bottom:1px solid var(--border);"><b style="color:var(--primary);">'+a.p1+'</b> → <b style="color:var(--accent);">'+a.p2+'</b> <span style="color:var(--text-muted);">('+a.cnt+'次)</span></div>';
+    }).join(''):'<div style="color:var(--text-secondary);">今日暂无关联数据</div>';
+  }catch(e){}
+})();
 </script>
 <div class="version-badge">v2.4.1</div>
 <script>

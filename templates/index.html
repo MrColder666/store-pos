@@ -98,6 +98,10 @@
 
     <!-- Order Summary -->
     <div id="pay-order-summary" style="margin-bottom:10px;font-size:13px;"></div>
+    <div style="margin-bottom:8px;display:flex;gap:8px;align-items:center;">
+      <span style="font-size:12px;color:var(--text-secondary);">👤 顾客姓名</span>
+      <input id="pay-customer-name" class="form-input" placeholder="可选" style="flex:1;font-size:13px;padding:6px 8px;">
+    </div>
     <div style="font-size:22px;font-weight:700;text-align:right;color:var(--primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);">
       应收: ¥<span id="pay-total">0.00</span>
       <span id="member-discount-badge" style="display:none;font-size:12px;color:var(--success);margin-left:8px;"></span>
@@ -468,10 +472,11 @@ async function loginMember() {
     // Re-create order with member discount
     try {
       const note = document.getElementById('order-note').value.trim();
+      const cname = document.getElementById('pay-customer-name').value.trim();
       const res = await fetch('/api/orders', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
           items: cart.map(c => ({ product_id: c.id, quantity: c.qty, options: c.options || [] })),
-          note: note, customer_id: d.id||0, customer_name: d.name
+          note: note, customer_id: d.id||0, customer_name: cname || d.name
         })
       });
       const od = await res.json();
@@ -517,7 +522,7 @@ async function openPayModal() {
         items: cart.map(c => ({ product_id: c.id, quantity: c.qty, options: c.options || [] })),
         note: note,
         customer_id: (pendingMember?pendingMember.customer_id:0),
-        customer_name: (pendingMember?pendingMember.customer_name:'')
+        customer_name: document.getElementById('pay-customer-name').value.trim() || (pendingMember?pendingMember.customer_name:'')
       })
     });
     const data = await res.json();

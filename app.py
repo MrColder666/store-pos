@@ -588,6 +588,21 @@ def stats_today():
         (today,)
     ).fetchall()
 
+    # Repeat customer rate
+    repeat = conn.execute("""
+        SELECT COUNT(*) as repeat_cnt, COUNT(DISTINCT customer_name) as total_customers
+        FROM orders
+        WHERE date(created_at)=? AND (status='paid' OR status='completed')
+          AND customer_name != '' AND customer_name IS NOT NULL
+        GROUP BY customer_name HAVING COUNT(*) > 1
+    """, (today,)).fetchall()
+    repeat_cnt = len(repeat)
+    total_customers = conn.execute(
+        "SELECT COUNT(DISTINCT customer_name) FROM orders WHERE date(created_at)=? AND (status='paid' OR status='completed') AND customer_name != '' AND customer_name IS NOT NULL",
+        (today,)
+    ).fetchone()[0] or 1
+    repeat_rate = round(repeat_cnt / total_customers * 100, 1) if total_customers > 0 else 0
+
     conn.close()
     return jsonify({
         'date': today,
@@ -595,6 +610,9 @@ def stats_today():
         'revenue': round(row['revenue'], 2),
         'items_sold': row['items_sold'],
         'profit_share': round(row['profit_share'], 2),
+        'avg_order': round(row['revenue'] / row['order_count'], 2) if row['order_count'] > 0 else 0,
+        'attach_rate': round(row['items_sold'] / row['order_count'], 2) if row['order_count'] > 0 else 0,
+        'repeat_rate': repeat_rate,
         'payment_breakdown': [dict(p) for p in pay_breakdown],
         'top_products': [dict(t) for t in top],
         'recent_orders': [dict(r) for r in recent],
@@ -1054,6 +1072,22 @@ def clear_tickets():
     conn.execute("DELETE FROM tickets")
     conn.commit(); conn.close()
     return jsonify({'ok':True})
+
+
+# ─── Stats: Associations ─────────────────────────────────────
+@app.route('/api/stats/associations')
+def stats_associations():
+    conn = get_db()
+    today = date.today().isoformat()
+    rows = conn.execute("""
+        SELECT a.product_name as p1, b.product_name as p2, COUNT(*) as cnt
+        FROM order_items a JOIN order_items b ON a.order_id = b.order_id AND a.id < b.id
+        JOIN orders o ON o.id = a.order_id
+        WHERE date(o.created_at)=? AND (o.status='paid' OR o.status='completed')
+        GROUP BY p1, p2 ORDER BY cnt DESC LIMIT 10
+    """, (today,)).fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
 
 
 # ─── Lucky Wheel ───────────────────────────────────────────────
