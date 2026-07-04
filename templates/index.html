@@ -512,11 +512,6 @@ async function openPayModal() {
   document.getElementById('pay-order-summary').innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:10px;">计算中...</div>';
   document.getElementById('pay-total').textContent = '...';
   pendingMember = null; document.getElementById('member-discount-badge').style.display='none'; document.getElementById('member-login').style.display='none'; document.getElementById('member-name').value=''; document.getElementById('member-pw').value='';
-  // Show member promo if cart total >= 5
-  var cartTotal = parseFloat(document.getElementById('pay-total').textContent) || 0;
-  if (cartTotal >= 5) {
-    document.getElementById('member-promo-bg').classList.add('active');
-  }
   document.getElementById('pay-modal-bg').classList.add('active');
   
   // Reset payment method
@@ -562,6 +557,10 @@ async function openPayModal() {
     });
     document.getElementById('pay-order-summary').innerHTML = html;
     document.getElementById('pay-total').textContent = data.total.toFixed(2);
+    // Show member promo popup
+    if (data.total >= 5) {
+      document.getElementById('member-promo-bg').classList.add('active');
+    }
   } catch (e) {
     document.getElementById('pay-order-summary').innerHTML = '<div style="color:var(--danger);text-align:center;">❌ 网络错误</div>';
   }
