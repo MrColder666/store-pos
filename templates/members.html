@@ -28,7 +28,7 @@
 <!-- Confirm Modal -->
 <div class="modal-bg" id="confirm-bg"><div class="modal" style="text-align:center;"><h2>⚠️ 确认删除</h2><p style="color:var(--text-secondary);margin-bottom:12px;" id="confirm-msg"></p><div class="btn-row"><button class="btn btn-ghost" id="confirm-cancel">取消</button><button class="btn btn-danger" id="confirm-ok">删除</button></div></div></div>
 
-<div class="version-badge">v2.4.1</div>
+<div class="version-badge">v2.6.1</div>
 
 <script>
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.className='toast show';setTimeout(function(){t.className='toast'},2000);}
@@ -39,7 +39,7 @@ function confirmDelete(msg){return new Promise(function(resolve){document.getEle
 
 async function saveMember(){var n=document.getElementById('f-name').value.trim(),p=document.getElementById('f-pw').value.trim();if(!n||!p){toast('请填写完整');return}var r=await fetch('/api/members',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,password:p})});var d=await r.json();if(d.error){toast('❌ '+d.error);return}toast('✅ '+d.message);closeModal();loadMembers();}
 
-async function loadMembers(){var r=await fetch('/api/members');var members=await r.json();document.getElementById('member-list').innerHTML=members.map(function(m){var badge=m.is_member?(m.discount_level==='90off'?'🎉 9折':'👤 95折'):'⏳ '+m.consecutive_days+'天';return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:600;">'+m.name+'</div><div style="font-size:12px;color:var(--text-secondary);">'+badge+' ('+m.consecutive_days+'/3天)</div></div><div style="display:flex;gap:6px;"><button class="btn btn-sm btn-danger" onclick="deleteMember('+m.id+')">删除</button></div></div></div>'}).join('')||'<div class="card" style="text-align:center;color:var(--text-secondary);">暂无会员</div>';}
+async function loadMembers(){var r=await fetch('/api/members');var members=await r.json();document.getElementById('member-list').innerHTML=members.map(function(m){var badge='';var ts=m.total_spent||0;if(m.is_member){if(m.consecutive_days>=3&&ts>=20)badge='🎉 88折';else if(ts>=10)badge='👤 9折';else badge='👤 消费¥'+ts.toFixed(0)+'/¥10'}else{badge='⏳ '+m.consecutive_days+'天'}return '<div class=\"card\"><div style=\"display:flex;justify-content:space-between;align-items:center;\"><div><div style=\"font-weight:600;\">'+m.name+'</div><div style=\"font-size:12px;color:var(--text-secondary);\">'+badge+' (累计 ¥'+ts.toFixed(0)+')</div></div><div style=\"display:flex;gap:6px;\"><button class=\"btn btn-sm btn-danger\" onclick=\"deleteMember('+m.id+')\">删除</button></div></div></div>'}).join('')||'<div class=\"card\" style=\"text-align:center;color:var(--text-secondary);\">暂无会员</div>';}
 
 async function deleteMember(id){var ok=await confirmDelete('确定删除该会员？此操作不可撤销。');if(!ok)return;await fetch('/api/members/'+id+'/delete',{method:'POST'});toast('✅ 已删除');loadMembers();}
 loadMembers();
