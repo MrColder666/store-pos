@@ -251,14 +251,19 @@ def create_order():
     if customer_id > 0:
         m = conn.execute("SELECT * FROM members WHERE id=?",(customer_id,)).fetchone()
         if m and m['is_member']:
-            total_spent = float(m['total_spent'] or 0)
             today = date.today().isoformat()
             consecutive = m['consecutive_days'] or 1
-            # 88折: 连续3天 + 总消费 ≥ 20
-            if consecutive >= 3 and total_spent >= 20:
-                member_discount = round(total * 0.12, 2)
-            # 9折: 总消费 ≥ 10
-            elif total_spent >= 10:
+            # 88折: 连续3天 + 近3天累计消费 ≥ 20
+            if consecutive >= 3:
+                three_days_ago = (date.today() - timedelta(days=2)).isoformat()
+                recent_total = conn.execute(
+                    "SELECT COALESCE(SUM(total_amount),0) FROM orders WHERE customer_id=? AND date(created_at) BETWEEN ? AND ? AND (status='paid' OR status='completed')",
+                    (customer_id, three_days_ago, today)
+                ).fetchone()[0] or 0
+                if recent_total + total >= 20:
+                    member_discount = round(total * 0.12, 2)
+            # 9折: 本单 ≥ 10
+            if member_discount == 0 and total >= 10:
                 member_discount = round(total * 0.10, 2)
             total = round(max(0, total - member_discount), 2)
 
@@ -1008,14 +1013,12 @@ def login_member():
     discount = 'none'
     discount_label = 'none'
     if row['is_member']:
-        if consecutive >= 3 and total_spent >= 20:
+        if consecutive >= 3:
+            discount_label = '连3天满¥20享88折'
             discount = '88off'
-            discount_label = '88折'
-        elif total_spent >= 10:
-            discount = '90off'
-            discount_label = '9折'
         else:
-            discount_label = '消费满¥10享9折'
+            discount_label = '9折（单笔满¥10）'
+            discount = '90off'
     conn.close()
     return jsonify({
         'id':row['id'],'name':row['name'],'is_member':bool(row['is_member']),
