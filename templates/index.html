@@ -59,7 +59,7 @@
     <h2>🎫 注册会员免费！</h2>
     <p style="font-size:14px;color:var(--text-secondary);margin:8px 0;">单次消费满 <b style="color:var(--primary);">¥10</b> 元<br>即享 <b style="color:var(--success);">9折</b> 优惠！</p>
     <div class="btn-row">
-      <button class="btn" style="background:#f1f5f9;" onclick="document.getElementById('member-promo-bg').classList.remove('active')">知道了</button>
+      <button class="btn" style="background:#f1f5f9;" id="promo-ok">知道了</button>
       <a href="/members" class="btn btn-primary" style="text-decoration:none;">办会员</a>
     </div>
   </div>
@@ -479,9 +479,13 @@ async function loginMember() {
     if (d.error) { toast('❌ '+d.error); return; }
     pendingMember = { customer_id: d.id || 0, customer_name: d.name };
     const badge = document.getElementById('member-discount-badge');
-    var label = d.discount_label || (d.discount_level==='90off'?'9折':d.discount_level==='95off'?'95折':d.is_member?'消费满¥10享9折':'');
-    if (label) { badge.textContent = '👤 '+label; badge.style.display = 'inline'; }
-    else { badge.textContent = '第'+d.consecutive_days+'天 (消费¥'+((d.total_spent||0).toFixed(0))+'/¥10)'; badge.style.display = 'inline'; }
+    if (d.is_member) {
+      badge.textContent = '👤 会员（满¥10打9折）';
+      badge.style.display = 'inline';
+    } else {
+      badge.textContent = '第'+d.consecutive_days+'天';
+      badge.style.display = 'inline';
+    }
     toast('✅ 已识别'); document.getElementById('member-login').style.display = 'none';
     // Re-create order with member discount
     try {
@@ -517,8 +521,15 @@ async function openPayModal() {
   pendingMember = null; document.getElementById('member-discount-badge').style.display='none'; document.getElementById('member-login').style.display='none'; document.getElementById('member-name').value=''; document.getElementById('member-pw').value='';
   // Show member promo if cart total >= 5
   var ct = cart.reduce(function(s,c){return s + c.price*c.qty}, 0);
-  if (ct >= 5) document.getElementById('member-promo-bg').classList.add('active');
-  document.getElementById('pay-modal-bg').classList.add('active');
+  if (ct >= 5) {
+    document.getElementById('member-promo-bg').classList.add('active');
+    document.getElementById('promo-ok').onclick = function() {
+      document.getElementById('member-promo-bg').classList.remove('active');
+      document.getElementById('pay-modal-bg').classList.add('active');
+    };
+  } else {
+    document.getElementById('pay-modal-bg').classList.add('active');
+  }
   
   // Reset payment method
   selectedPayMethod = '';
