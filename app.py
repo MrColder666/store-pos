@@ -165,6 +165,7 @@ def create_order():
     coupon_name = ''
     coupon_type = 'fixed'
     coupon_mode = 'total'
+    base_total = 0.0  # subtotal for profit share calc
 
     for item in items:
         pid = item.get('product_id')
@@ -218,6 +219,8 @@ def create_order():
         subtotal = round(unit_price * qty, 2)
         total += subtotal
         total_qty += qty
+        if not row['is_coupon']:
+            base_total += subtotal
         order_items.append({
             'product_id': pid,
             'product_name': product_name,
@@ -252,9 +255,10 @@ def create_order():
             total = round(max(0, total - member_discount), 2)
 
     total = round(total, 2)
+    profit_share = round(base_total * 0.20, 2)
     cur = conn.execute(
-        "INSERT INTO orders (total_amount, item_count, note, status, payment_status, customer_name, customer_id) VALUES (?,?,?,'pending','unpaid',?,?)",
-        (total, total_qty, note, customer_name, customer_id)
+        "INSERT INTO orders (total_amount, item_count, note, status, payment_status, customer_name, customer_id, profit_share) VALUES (?,?,?,'pending','unpaid',?,?,?)",
+        (total, total_qty, note, customer_name, customer_id, profit_share)
     )
     order_id = cur.lastrowid
 
@@ -544,7 +548,8 @@ def stats_today():
     # Overall stats
     row = conn.execute(
         "SELECT COUNT(*) as order_count, COALESCE(SUM(total_amount),0) as revenue, "
-        "COALESCE(SUM(item_count),0) as items_sold "
+        "COALESCE(SUM(item_count),0) as items_sold, "
+        "COALESCE(SUM(profit_share),0) as profit_share "
         "FROM orders WHERE date(created_at)=? AND (status='paid' OR status='completed')",
         (today,)
     ).fetchone()
@@ -585,6 +590,7 @@ def stats_today():
         'order_count': row['order_count'],
         'revenue': round(row['revenue'], 2),
         'items_sold': row['items_sold'],
+        'profit_share': round(row['profit_share'], 2),
         'payment_breakdown': [dict(p) for p in pay_breakdown],
         'top_products': [dict(t) for t in top],
         'recent_orders': [dict(r) for r in recent],
@@ -604,23 +610,25 @@ def stats_weekly():
     daily = conn.execute("""
         SELECT date(created_at) as day, COUNT(*) as order_count,
                COALESCE(SUM(total_amount),0) as revenue,
-               COALESCE(SUM(item_count),0) as items_sold
+               COALESCE(SUM(item_count),0) as items_sold,
+               COALESCE(SUM(profit_share),0) as profit_share
         FROM orders WHERE date(created_at) BETWEEN ? AND ? AND (status='paid' OR status='completed')
         GROUP BY date(created_at) ORDER BY day
     """, (week_start, week_end)).fetchall()
 
     daily_map = {r['day']: dict(r) for r in daily}
     week_days = []
-    total_revenue = 0; total_orders = 0; total_items = 0
+    total_revenue = 0; total_orders = 0; total_items = 0; total_profit = 0
     for i in range(7):
         d = (monday + timedelta(days=i)).isoformat()
         if d in daily_map:
             dd = daily_map[d]
-            total_revenue += dd['revenue']
-            total_orders += dd['order_count']
-            total_items += dd['items_sold']
+            total_revenue += dd['revenue'] or 0
+            total_orders += dd['order_count'] or 0
+            total_items += dd['items_sold'] or 0
+            total_profit += dd.get('profit_share', 0) or 0
         else:
-            dd = {'day': d, 'order_count': 0, 'revenue': 0, 'items_sold': 0}
+            dd = {'day': d, 'order_count': 0, 'revenue': 0, 'items_sold': 0, 'profit_share': 0}
         week_days.append(dd)
 
     orders_raw = conn.execute("""
@@ -664,6 +672,7 @@ def stats_weekly():
     return jsonify({
         'week_start': week_start, 'week_end': week_end,
         'total_revenue': round(total_revenue, 2),
+        'total_profit': round(total_profit, 2),
         'total_orders': total_orders, 'total_items': total_items,
         'daily': week_days, 'day_names': day_names_cn,
         'orders': order_list, 'hour_distribution': [dict(h) for h in hour_dist],

@@ -17,6 +17,7 @@
     <div class="stat-card"><div class="num" id="stat-orders">-</div><div class="label">订单数</div></div>
     <div class="stat-card"><div class="num" id="stat-revenue">-</div><div class="label">营收</div></div>
     <div class="stat-card"><div class="num" id="stat-items">-</div><div class="label">售出件数</div></div>
+    <div class="stat-card"><div class="num" id="stat-profit">-</div><div class="label">分润 (20%)</div></div>
   </div>
 
   <!-- Payment Method Breakdown -->
@@ -85,6 +86,7 @@ async function loadStats() {
   document.getElementById('stat-orders').textContent = d.order_count;
   document.getElementById('stat-revenue').textContent = '¥' + d.revenue.toFixed(2);
   document.getElementById('stat-items').textContent = d.items_sold;
+  document.getElementById('stat-profit').textContent = '¥' + (d.profit_share||0).toFixed(2);
 
   // Payment breakdown
   const payMap = { cash: 0, wechat: 0, alipay: 0 };

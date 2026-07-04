@@ -110,6 +110,12 @@ def init_db():
     except (sqlite3.OperationalError, sqlite3.IntegrityError):
         pass
 
+    # ── v2.5.0 Migration: profit_share ──
+    try:
+        conn.execute("ALTER TABLE orders ADD COLUMN profit_share REAL DEFAULT 0")
+    except (sqlite3.OperationalError, sqlite3.IntegrityError):
+        pass
+
     # ── v2.2.1 Migration: coupon support ────
     try:
         conn.execute("ALTER TABLE products ADD COLUMN is_coupon INTEGER DEFAULT 0")
