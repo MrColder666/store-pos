@@ -52,6 +52,17 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- Member Promo Modal -->
+<div class="modal-bg" id="member-promo-bg">
+  <div class="modal" style="text-align:center;max-width:360px;">
+    <h2>🎫 注册会员免费！</h2>
+    <p style="font-size:14px;color:var(--text-secondary);margin:8px 0;">单次消费满 <b style="color:var(--primary);">¥10</b> 元<br>即享 <b style="color:var(--success);">9折</b> 优惠！</p>
+    <button class="btn btn-primary btn-block" onclick="document.getElementById('member-promo-bg').classList.remove('active');document.getElementById('member-row').scrollIntoView()">知道了</button>
+  </div>
+</div>
+
+<!-- Toast -->
 <!-- cashier sound uses Web Audio -->
 
 <div class="version-badge">v2.4.1</div>
@@ -501,6 +512,12 @@ async function openPayModal() {
   document.getElementById('pay-order-summary').innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:10px;">计算中...</div>';
   document.getElementById('pay-total').textContent = '...';
   pendingMember = null; document.getElementById('member-discount-badge').style.display='none'; document.getElementById('member-login').style.display='none'; document.getElementById('member-name').value=''; document.getElementById('member-pw').value='';
+  // Show member promo if cart total >= 5
+  var cartTotal = parseFloat(document.getElementById('pay-total').textContent) || 0;
+  if (cartTotal >= 5 && !localStorage.getItem('member_promo_seen')) {
+    localStorage.setItem('member_promo_seen', '1');
+    document.getElementById('member-promo-bg').classList.add('active');
+  }
   document.getElementById('pay-modal-bg').classList.add('active');
   
   // Reset payment method

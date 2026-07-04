@@ -250,12 +250,16 @@ def create_order():
     member_discount = 0
     if customer_id > 0:
         m = conn.execute("SELECT * FROM members WHERE id=?",(customer_id,)).fetchone()
-        if m:
+        if m and m['is_member']:
+            total_spent = float(m['total_spent'] or 0)
             today = date.today().isoformat()
-            if m['discount_level'] == '90off':
+            consec = m['consecutive_days'] or 1
+            # 88折: 连续3天 + 总消费 ≥ 20
+            if consec >= 3 and total_spent >= 20:
+                member_discount = round(total * 0.12, 2)
+            # 9折: 总消费 ≥ 10
+            elif total_spent >= 10:
                 member_discount = round(total * 0.10, 2)
-            elif m['discount_level'] == '95off':
-                member_discount = round(total * 0.05, 2)
             total = round(max(0, total - member_discount), 2)
 
     total = round(total, 2)
@@ -344,9 +348,9 @@ def pay_order(oid):
             else:
                 conn.execute("UPDATE members SET consecutive_days=1,last_purchase_date=? WHERE id=?",
                     (today, order['customer_id']))
-            # Auto-upgrade to member if consecutive >= 3
-            if consec >= 3 and not m['is_member']:
-                conn.execute("UPDATE members SET is_member=1,discount_level='90off' WHERE id=?",(order['customer_id'],))
+            # Accumulate total_spent
+            conn.execute("UPDATE members SET total_spent=total_spent+? WHERE id=?",
+                (order['total_amount'], order['customer_id']))
 
     conn.commit(); conn.close()
     return jsonify({

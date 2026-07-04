@@ -87,6 +87,7 @@ def init_db():
             consecutive_days INTEGER DEFAULT 1,
             last_purchase_date TEXT DEFAULT '',
             discount_level TEXT DEFAULT 'none',
+            total_spent REAL DEFAULT 0,
             created_at TEXT DEFAULT (datetime('now','localtime'))
         );
         CREATE TABLE IF NOT EXISTS tickets (
@@ -108,6 +109,12 @@ def init_db():
         pass
     try:
         conn.execute("ALTER TABLE orders ADD COLUMN customer_id INTEGER DEFAULT 0")
+    except (sqlite3.OperationalError, sqlite3.IntegrityError):
+        pass
+
+    # ── v2.6.1 Migration: total_spent on members ──
+    try:
+        conn.execute("ALTER TABLE members ADD COLUMN total_spent REAL DEFAULT 0")
     except (sqlite3.OperationalError, sqlite3.IntegrityError):
         pass
 
