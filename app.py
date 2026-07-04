@@ -219,7 +219,7 @@ def create_order():
         subtotal = round(unit_price * qty, 2)
         total += subtotal
         total_qty += qty
-        if not row['is_coupon']:
+        if not row['is_coupon'] and '抽奖' not in (row['name'] or ''):
             base_total += subtotal
         order_items.append({
             'product_id': pid,
