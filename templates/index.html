@@ -476,9 +476,9 @@ async function loginMember() {
     if (d.error) { toast('❌ '+d.error); return; }
     pendingMember = { customer_id: d.id || 0, customer_name: d.name };
     const badge = document.getElementById('member-discount-badge');
-    if (d.discount_level === '90off') { badge.textContent = '🎉 连续3天 9折'; badge.style.display = 'inline'; }
-    else if (d.discount_level === '95off') { badge.textContent = '👤 会员95折'; badge.style.display = 'inline'; }
-    else { badge.textContent = '第'+d.consecutive_days+'天 ('+(3-d.consecutive_days)+'天后9折)'; badge.style.display = 'inline'; }
+    var label = d.discount_label || (d.discount_level==='90off'?'9折':d.discount_level==='95off'?'95折':d.is_member?'消费满¥10享9折':'');
+    if (label) { badge.textContent = '👤 '+label; badge.style.display = 'inline'; }
+    else { badge.textContent = '第'+d.consecutive_days+'天 (消费¥'+((d.total_spent||0).toFixed(0))+'/¥10)'; badge.style.display = 'inline'; }
     toast('✅ 已识别'); document.getElementById('member-login').style.display = 'none';
     // Re-create order with member discount
     try {
@@ -514,8 +514,7 @@ async function openPayModal() {
   pendingMember = null; document.getElementById('member-discount-badge').style.display='none'; document.getElementById('member-login').style.display='none'; document.getElementById('member-name').value=''; document.getElementById('member-pw').value='';
   // Show member promo if cart total >= 5
   var cartTotal = parseFloat(document.getElementById('pay-total').textContent) || 0;
-  if (cartTotal >= 5 && !localStorage.getItem('member_promo_seen')) {
-    localStorage.setItem('member_promo_seen', '1');
+  if (cartTotal >= 5) {
     document.getElementById('member-promo-bg').classList.add('active');
   }
   document.getElementById('pay-modal-bg').classList.add('active');

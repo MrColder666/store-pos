@@ -966,7 +966,7 @@ def register_member():
     if existing:
         conn.close()
         return jsonify({'error': '该用户已存在'}), 400
-    conn.execute("INSERT INTO members (name,password,is_member,discount_level) VALUES (?,?,1,'95off')",
+    conn.execute("INSERT INTO members (name,password,is_member,discount_level) VALUES (?,?,1,'none')",
         (name,password))
     conn.commit(); conn.close()
     return jsonify({'ok':True,'message':'会员注册成功，享95折'})
@@ -1003,14 +1003,24 @@ def login_member():
         consecutive = 1
         conn.execute("UPDATE members SET consecutive_days=1,last_purchase_date=? WHERE id=?",(today,row['id']))
         conn.commit()
-    # Determine discount
+    # Determine discount (new rules)
+    total_spent = float(row['total_spent'] or 0)
     discount = 'none'
-    if row['is_member']: discount = '95off'
-    if consecutive >= 3: discount = '90off'
+    discount_label = 'none'
+    if row['is_member']:
+        if consec >= 3 and total_spent >= 20:
+            discount = '88off'
+            discount_label = '88折'
+        elif total_spent >= 10:
+            discount = '90off'
+            discount_label = '9折'
+        else:
+            discount_label = '消费满¥10享9折'
     conn.close()
     return jsonify({
         'id':row['id'],'name':row['name'],'is_member':bool(row['is_member']),
-        'consecutive_days':consecutive,'discount_level':discount
+        'consecutive_days':consecutive,'discount_level':discount,
+        'discount_label':discount_label,'total_spent':total_spent
     })
 
 @app.route('/api/members/<int:mid>/delete', methods=['POST'])
