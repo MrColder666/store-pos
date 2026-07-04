@@ -229,6 +229,7 @@ async function showDetail(oid) {
     </table>
     <div style="text-align:right;font-size:18px;font-weight:700;color:var(--primary);margin-top:8px;">
       合计: ¥${o.total_amount.toFixed(2)} (${o.item_count}件)
+      ${o.profit_share>0?`<div style="font-size:13px;color:var(--accent);margin-top:4px;">💰 分润 (20%): ¥${o.profit_share.toFixed(2)}</div>`:''}
     </div>
   `;
 

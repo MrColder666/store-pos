@@ -18,6 +18,7 @@
     <div class="stat-card"><div class="num" id="w-revenue">-</div><div class="label">本周营收</div></div>
     <div class="stat-card"><div class="num" id="w-orders">-</div><div class="label">总订单</div></div>
     <div class="stat-card"><div class="num" id="w-items">-</div><div class="label">售出件数</div></div>
+    <div class="stat-card"><div class="num" id="w-profit">-</div><div class="label">总分润</div></div>
   </div>
 
   <!-- Daily Revenue Bar Chart -->
@@ -86,6 +87,7 @@ async function loadWeekly() {
   document.getElementById('w-revenue').textContent = '¥' + d.total_revenue.toFixed(2);
   document.getElementById('w-orders').textContent = d.total_orders;
   document.getElementById('w-items').textContent = d.total_items;
+  document.getElementById('w-profit').textContent = '¥' + (d.total_profit||0).toFixed(2);
 
   // ── Daily Bar Chart ──
   const dailyValues = d.daily.map(day => day.revenue);
@@ -124,7 +126,7 @@ async function loadWeekly() {
   // ── Daily Table ──
   const dayNamesFull = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
   const tableEl = document.getElementById('daily-table');
-  let tableHtml = '<tr><th>日期</th><th>星期</th><th>订单数</th><th>售出件数</th><th>营收</th></tr>';
+  let tableHtml = '<tr><th>日期</th><th>星期</th><th>订单数</th><th>售出件数</th><th>营收</th><th>分润</th></tr>';
   d.daily.forEach((day, i) => {
     tableHtml += `
       <tr>
@@ -133,6 +135,7 @@ async function loadWeekly() {
         <td>${day.order_count}</td>
         <td>${day.items_sold}</td>
         <td style="font-weight:600;color:var(--primary);">¥${day.revenue.toFixed(2)}</td>
+        <td style="color:var(--accent);">¥${(day.profit_share||0).toFixed(2)}</td>
       </tr>
     `;
   });
@@ -143,6 +146,7 @@ async function loadWeekly() {
       <td>${d.total_orders}</td>
       <td>${d.total_items}</td>
       <td style="color:var(--primary);">¥${d.total_revenue.toFixed(2)}</td>
+      <td style="color:var(--accent);">¥${(d.total_profit||0).toFixed(2)}</td>
     </tr>
   `;
   tableEl.innerHTML = tableHtml;

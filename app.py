@@ -820,7 +820,7 @@ def export_weekly_csv():
     monday = today - timedelta(days=today.weekday())
     conn = get_db()
     rows = conn.execute("""
-        SELECT o.id, o.total_amount, o.item_count, o.status, o.payment_method,
+        SELECT o.id, o.total_amount, o.item_count, o.profit_share, o.status, o.payment_method,
                o.created_at, oi.product_name, oi.quantity, oi.unit_price, oi.subtotal
         FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id
         WHERE date(o.created_at) BETWEEN ? AND date(?, '+6 days')
@@ -829,8 +829,8 @@ def export_weekly_csv():
     """, (monday.isoformat(), monday.isoformat())).fetchall()
     conn.close()
     return csv_response(f'weekly_{monday.isoformat()}.csv',
-        ['订单ID','总金额','总件数','状态','支付方式','下单时间','商品名','数量','单价','小计'],
-        [[r['id'],r['total_amount'],r['item_count'],
+        ['订单ID','总金额','分润(20%)','总件数','状态','支付方式','下单时间','商品名','数量','单价','小计'],
+        [[r['id'],r['total_amount'],r['profit_share'],r['item_count'],
           r['status'],r['payment_method'],r['created_at'],r['product_name'],r['quantity'],r['unit_price'],r['subtotal']] for r in rows])
 
 
