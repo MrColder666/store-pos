@@ -512,6 +512,9 @@ async function openPayModal() {
   document.getElementById('pay-order-summary').innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:10px;">计算中...</div>';
   document.getElementById('pay-total').textContent = '...';
   pendingMember = null; document.getElementById('member-discount-badge').style.display='none'; document.getElementById('member-login').style.display='none'; document.getElementById('member-name').value=''; document.getElementById('member-pw').value='';
+  // Show member promo if cart total >= 5
+  var ct = cart.reduce(function(s,c){return s + c.price*c.qty}, 0);
+  if (ct >= 5) document.getElementById('member-promo-bg').classList.add('active');
   document.getElementById('pay-modal-bg').classList.add('active');
   
   // Reset payment method
