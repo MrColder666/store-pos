@@ -28,6 +28,7 @@ def init_db():
             discount_type TEXT DEFAULT 'percent',
             is_coupon INTEGER DEFAULT 0,
             coupon_mode TEXT DEFAULT 'total',
+            min_spend REAL DEFAULT 0,
             position INTEGER DEFAULT 0,
             created_at TEXT DEFAULT (datetime('now','localtime'))
         );
@@ -107,6 +108,12 @@ def init_db():
         pass
     try:
         conn.execute("ALTER TABLE orders ADD COLUMN customer_id INTEGER DEFAULT 0")
+    except (sqlite3.OperationalError, sqlite3.IntegrityError):
+        pass
+
+    # ── v2.5.1 Migration: min_spend on products ──
+    try:
+        conn.execute("ALTER TABLE products ADD COLUMN min_spend REAL DEFAULT 0")
     except (sqlite3.OperationalError, sqlite3.IntegrityError):
         pass
 

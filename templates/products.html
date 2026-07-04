@@ -57,6 +57,10 @@
         <option value="total">整体减价（减订单总额）</option>
         <option value="item">单品减价（指定购物车中某件商品）</option>
       </select>
+      <div style="margin-top:6px;">
+        <label>满多少可用（0=无门槛）</label>
+        <input class="form-input" id="f-min-spend" type="number" min="0" step="0.01" placeholder="例: 10 表示满 ¥10 可用" style="margin-top:2px;">
+      </div>
     </div>
     <div class="form-group" id="discount-section">
       <label id="f-discount-label">折扣百分比</label>
@@ -220,6 +224,7 @@ function editProduct(id) {
     document.getElementById('f-discount').value = p.discount || 0;
     document.getElementById('f-is-coupon').checked = p.is_coupon ? true : false;
     document.getElementById('f-coupon-mode').value = p.coupon_mode || 'total';
+    document.getElementById('f-min-spend').value = p.min_spend || 0;
     toggleCoupon();
     document.getElementById('modal-bg').classList.add('active');
   });
@@ -238,6 +243,7 @@ async function saveProduct() {
   const discount_type = document.getElementById('f-discount-type').value;
   const is_coupon = document.getElementById('f-is-coupon').checked;
   const coupon_mode = document.getElementById('f-coupon-mode').value;
+  const min_spend = parseFloat(document.getElementById('f-min-spend').value) || 0;
   if (is_coupon) price = 0;
 
   if (!name) { toast('请输入商品名称'); return; }
@@ -251,7 +257,7 @@ async function saveProduct() {
   const res = await fetch(url, {
     method,
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ name, price, category, stock, discount, discount_type, is_coupon, coupon_mode })
+    body: JSON.stringify({ name, price, category, stock, discount, discount_type, is_coupon, coupon_mode, min_spend })
   });
   const data = await res.json();
   if (data.error) { toast('❌ ' + data.error); return; }

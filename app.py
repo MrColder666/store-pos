@@ -70,6 +70,7 @@ def add_product():
         if is_coupon:
             price = 0
         coupon_mode = data.get('coupon_mode', 'total')
+        min_spend = float(data.get('min_spend', 0) or 0)
         if is_coupon and coupon_mode not in ('total', 'item'):
             return jsonify({'error': '优惠券类型无效'}), 400
         if not is_coupon and discount < 0:
@@ -83,8 +84,8 @@ def add_product():
     category = data.get('category', '').strip()
     conn = get_db()
     conn.execute(
-        "INSERT INTO products (name, price, category, stock, discount, discount_type, is_coupon, coupon_mode) VALUES (?,?,?,?,?,?,?,?)",
-        (name, price, category, stock, discount, discount_type, is_coupon, coupon_mode)
+        "INSERT INTO products (name, price, category, stock, discount, discount_type, is_coupon, coupon_mode, min_spend) VALUES (?,?,?,?,?,?,?,?,?)",
+        (name, price, category, stock, discount, discount_type, is_coupon, coupon_mode, min_spend)
     )
     conn.commit(); conn.close()
     return jsonify({'ok': True})
@@ -104,6 +105,7 @@ def update_product(pid):
         if is_coupon:
             price = 0
         coupon_mode = data.get('coupon_mode', 'total')
+        min_spend = float(data.get('min_spend', 0) or 0)
         if is_coupon and coupon_mode not in ('total', 'item'):
             return jsonify({'error': '优惠券类型无效'}), 400
         if not is_coupon and discount < 0:
@@ -117,8 +119,8 @@ def update_product(pid):
     category = data.get('category', '').strip()
     conn = get_db()
     conn.execute(
-        "UPDATE products SET name=?, price=?, category=?, stock=?, discount=?, discount_type=?, is_coupon=?, coupon_mode=? WHERE id=?",
-        (name, price, category, stock, discount, discount_type, is_coupon, coupon_mode, pid)
+        "UPDATE products SET name=?, price=?, category=?, stock=?, discount=?, discount_type=?, is_coupon=?, coupon_mode=?, min_spend=? WHERE id=?",
+        (name, price, category, stock, discount, discount_type, is_coupon, coupon_mode, min_spend, pid)
     )
     conn.commit(); conn.close()
     return jsonify({'ok': True})
@@ -165,6 +167,7 @@ def create_order():
     coupon_name = ''
     coupon_type = 'fixed'
     coupon_mode = 'total'
+    coupon_min_spend = 0.0
     base_total = 0.0  # subtotal for profit share calc
 
     for item in items:
@@ -182,6 +185,7 @@ def create_order():
             coupon_discount = float(row['discount'] or row['price'] or 0)
             coupon_type = row['discount_type'] or 'fixed'
             coupon_mode = row['coupon_mode'] or 'total'
+            coupon_min_spend = float(row['min_spend'] or 0)
             if coupon_discount <= 0:
                 continue
             continue
@@ -235,7 +239,7 @@ def create_order():
         return jsonify({'error': '未找到有效商品'}), 400
 
     # Apply coupon discount
-    if coupon_discount > 0:
+    if coupon_discount > 0 and total >= coupon_min_spend:
         if coupon_type == 'percent':
             coupon_discount = round(total * coupon_discount / 100, 2)
         if coupon_mode == 'item':
