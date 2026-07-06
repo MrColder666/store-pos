@@ -1013,6 +1013,62 @@ tr:hover td {
   .header h1 { font-size: 18px; }
 }
 
+/* ═══ Week Divider ═══ */
+.week-divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0 6px 0;
+  cursor: pointer;
+  user-select: none;
+}
+.week-divider-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border);
+}
+.week-divider-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 10px;
+  background: var(--bg-card);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.week-divider-icon {
+  font-size: 10px;
+  transition: transform 0.25s;
+  display: inline-block;
+  color: var(--text-muted);
+}
+.week-divider-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.week-divider-dates {
+  color: var(--text-muted);
+}
+.week-divider-count {
+  color: var(--text-muted);
+}
+.week-divider-total {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.week-group {
+  transition: opacity 0.2s;
+}
+
 /* ═══ Version Badge ═══ */
 .version-badge {
   position: fixed;

@@ -104,7 +104,7 @@
 </nav>
 
 <!-- Toast -->
-<div class="version-badge">v2.6.1</div>
+<div class="version-badge">v2.6.2</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -163,25 +163,76 @@ async function loadOrders(page = 1) {
   }
 
   let html = '';
+  // ── Group orders by ISO week ──
+  const weeks = new Map();
   data.orders.forEach(o => {
+    const d = new Date(o.created_at);
+    // ISO week number (Monday-based)
+    const dayNum = (d.getDay() + 6) % 7;
+    const thursday = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (3 - dayNum));
+    const jan1 = new Date(thursday.getFullYear(), 0, 1);
+    const weekNum = Math.ceil(((thursday - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+    // Monday & Sunday of this ISO week
+    const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dayNum);
+    const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+    const key = `${thursday.getFullYear()}-${String(weekNum).padStart(2,'0')}`;
+    if (!weeks.has(key)) {
+      weeks.set(key, {
+        label: `第 ${weekNum} 周`,
+        monday: `${monday.getMonth()+1}月${monday.getDate()}日`,
+        sunday: `${sunday.getMonth()+1}月${sunday.getDate()}日`,
+        orders: [],
+        total: 0
+      });
+    }
+    const w = weeks.get(key);
     const payInfo = o.payment_method
       ? ` · ${PAY_ICON_HTML[o.payment_method]||''} ${PAY_NAMES[o.payment_method]||o.payment_method}`
       : '';
+    w.orders.push(o);
+    w.total += o.total_amount;
+  });
+
+  // Render weeks in reverse order (newest first)
+  const sortedWeeks = [...weeks.entries()].sort((a,b) => b[0].localeCompare(a[0]));
+  const totalWeeks = sortedWeeks.length;
+  sortedWeeks.forEach(([key, w], idx) => {
+    const weekNum = totalWeeks - idx; // newest = highest number
+    w.label = `第 ${weekNum} 周`;
     html += `
-      <div class="card order-card" onclick="showDetail(${o.id})">
-        <div class="head">
-          <span class="oid">#${o.id}</span>
-          ${STATUS_BADGES[o.status] || '<span class="badge">'+o.status+'</span>'}
+      <div class="week-divider" onclick="toggleWeek('${key}')">
+        <div class="week-divider-line"></div>
+        <div class="week-divider-content">
+          <span class="week-divider-icon" id="week-icon-${key}">▼</span>
+          <span class="week-divider-label">📅 ${w.label}</span>
+          <span class="week-divider-dates">${w.monday} - ${w.sunday}</span>
+          <span class="week-divider-count">${w.orders.length} 单</span>
+          <span class="week-divider-total">¥${w.total.toFixed(2)}</span>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
-          <span class="time">${o.created_at}${payInfo}</span>
-          <span style="font-size:17px;font-weight:700;color:var(--primary);">¥${o.total_amount.toFixed(2)}</span>
-        </div>
-        ${o.note ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">📝 ${o.note}</div>` : ''}
-        ${o.customer_name ? `<div style="font-size:12px;color:var(--accent);margin-top:2px;">👤 ${o.customer_name}</div>` : ''}
-        ${o.profit_share>0?`<div style="font-size:12px;color:var(--primary);margin-top:2px;">💰 分润 ¥${o.profit_share.toFixed(2)}</div>`:''}
       </div>
+      <div class="week-group" id="week-${key}">
     `;
+    w.orders.forEach(o => {
+      const payInfo = o.payment_method
+        ? ` · ${PAY_ICON_HTML[o.payment_method]||''} ${PAY_NAMES[o.payment_method]||o.payment_method}`
+        : '';
+      html += `
+        <div class="card order-card" onclick="showDetail(${o.id})">
+          <div class="head">
+            <span class="oid">#${o.id}</span>
+            ${STATUS_BADGES[o.status] || '<span class="badge">'+o.status+'</span>'}
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+            <span class="time">${o.created_at}${payInfo}</span>
+            <span style="font-size:17px;font-weight:700;color:var(--primary);">¥${o.total_amount.toFixed(2)}</span>
+          </div>
+          ${o.note ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">📝 ${o.note}</div>` : ''}
+          ${o.customer_name ? `<div style="font-size:12px;color:var(--accent);margin-top:2px;">👤 ${o.customer_name}</div>` : ''}
+          ${o.profit_share>0?`<div style="font-size:12px;color:var(--primary);margin-top:2px;">💰 分润 ¥${o.profit_share.toFixed(2)}</div>`:''}
+        </div>
+      `;
+    });
+    html += '</div>';
   });
 
   if (data.pages > 1) {
@@ -406,6 +457,20 @@ async function confirmPayNow() {
 
   closePayNow();
   loadOrders(currentPage);
+}
+
+// ── Week collapse/expand ──
+function toggleWeek(key) {
+  const group = document.getElementById('week-' + key);
+  const icon = document.getElementById('week-icon-' + key);
+  if (!group || !icon) return;
+  if (group.style.display === 'none') {
+    group.style.display = 'block';
+    icon.style.transform = 'rotate(0deg)';
+  } else {
+    group.style.display = 'none';
+    icon.style.transform = 'rotate(-90deg)';
+  }
 }
 
 loadOrders();
