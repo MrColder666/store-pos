@@ -201,13 +201,12 @@ async function loadOrders(page = 1) {
     w.label = `第 ${weekNum} 周`;
     html += `
       <div class="week-divider" onclick="toggleWeek('${key}')">
-        <div class="week-divider-line"></div>
         <div class="week-divider-content">
-          <span class="week-divider-icon" id="week-icon-${key}">▼</span>
           <span class="week-divider-label">📅 ${w.label}</span>
           <span class="week-divider-dates">${w.monday} - ${w.sunday}</span>
           <span class="week-divider-count">${w.orders.length} 单</span>
           <span class="week-divider-total">¥${w.total.toFixed(2)}</span>
+          <span class="week-divider-icon" id="week-icon-${key}">▼</span>
         </div>
       </div>
       <div class="week-group" id="week-${key}">
