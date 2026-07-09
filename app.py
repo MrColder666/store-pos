@@ -186,6 +186,7 @@ def create_order():
             coupon_type = row['discount_type'] or 'fixed'
             coupon_mode = row['coupon_mode'] or 'total'
             coupon_min_spend = float(row['min_spend'] or 0)
+            coupon_qty = qty
             if coupon_discount <= 0:
                 continue
             continue
@@ -243,7 +244,7 @@ def create_order():
         if coupon_type == 'percent':
             coupon_discount = round(total * coupon_discount / 100, 2)
         if coupon_mode == 'item':
-            coupon_discount *= total_qty
+            coupon_discount *= coupon_qty
         total = round(max(0, total - coupon_discount), 2)
 
     # Apply membership discount
