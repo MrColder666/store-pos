@@ -160,6 +160,12 @@ def init_db():
     except (sqlite3.OperationalError, sqlite3.IntegrityError):
         pass  # Column already exists
 
+    # ── v2.6.4 Migration: optional on product_options ──────
+    try:
+        conn.execute("ALTER TABLE product_options ADD COLUMN optional INTEGER DEFAULT 0")
+    except (sqlite3.OperationalError, sqlite3.IntegrityError):
+        pass
+
     # ── v2.2 Migration: add 'completed' to orders status ──────
     # SQLite can't ALTER CHECK, so recreate the table if needed
     try:

@@ -871,7 +871,7 @@ def export_weekly_csv():
 def list_product_options(pid):
     conn = get_db()
     rows = conn.execute(
-        "SELECT id, group_name, option_name, price_adjustment, multi_select, sort_order "
+        "SELECT id, group_name, option_name, price_adjustment, multi_select, optional, sort_order "
         "FROM product_options WHERE product_id=? ORDER BY group_name, sort_order, id",
         (pid,)
     ).fetchall()
@@ -880,10 +880,10 @@ def list_product_options(pid):
     for r in rows:
         g = r['group_name']
         if g not in groups:
-            groups[g] = {'options': [], 'multi_select': bool(r['multi_select'])}
+            groups[g] = {'options': [], 'multi_select': bool(r['multi_select']), 'optional': bool(r['optional'])}
         groups[g]['options'].append({'id': r['id'], 'option_name': r['option_name'],
                           'price_adjustment': r['price_adjustment'], 'sort_order': r['sort_order']})
-    return jsonify([{'group_name': g, 'options': d['options'], 'multi_select': d['multi_select']}
+    return jsonify([{'group_name': g, 'options': d['options'], 'multi_select': d['multi_select'], 'optional': d['optional']}
                     for g, d in groups.items()])
 
 @app.route('/api/products/<int:pid>/options', methods=['POST'])
@@ -896,12 +896,13 @@ def save_product_options(pid):
         gname = group.get('group_name', '').strip()
         if not gname: continue
         multi = 1 if group.get('multi_select') else 0
+        optl = 1 if group.get('optional') else 0
         for opt in group.get('options', []):
             oname = opt.get('option_name', '').strip()
             if not oname: continue
             conn.execute(
-                "INSERT INTO product_options (product_id, group_name, option_name, price_adjustment, multi_select, sort_order) VALUES (?,?,?,?,?,?)",
-                (pid, gname, oname, float(opt.get('price_adjustment', 0)), multi, sort))
+                "INSERT INTO product_options (product_id, group_name, option_name, price_adjustment, multi_select, optional, sort_order) VALUES (?,?,?,?,?,?,?)",
+                (pid, gname, oname, float(opt.get('price_adjustment', 0)), multi, optl, sort))
             sort += 1
     conn.commit(); conn.close()
     return jsonify({'ok': True})

@@ -79,7 +79,7 @@
 </div>
 
 <!-- Toast -->
-<div class="version-badge">v2.6.3</div>
+<div class="version-badge">v2.6.4</div>
 <div class="toast" id="toast"></div>
 
 <!-- Confirm Modal -->
@@ -302,10 +302,14 @@ function renderOptionGroups(groups) {
         <input class="form-input" style="font-weight:600;width:auto;flex:1;margin-right:8px;" value="${g.group_name}" placeholder="选项组名称（如尺寸）" onchange="optData[${gi}].group_name=this.value">
         <button class="btn btn-sm btn-danger" onclick="removeOptionGroup(${gi})" style="font-size:12px;">✕</button>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
         <label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px;color:var(--text-secondary);">
           <input type="checkbox" ${g.multi_select ? 'checked' : ''} onchange="optData[${gi}].multi_select=this.checked" style="width:16px;height:16px;accent-color:var(--primary);">
-          允许多选（顾客可同时勾选多个选项）
+          允许多选
+        </label>
+        <label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px;color:var(--text-secondary);">
+          <input type="checkbox" ${g.optional ? 'checked' : ''} onchange="optData[${gi}].optional=this.checked" style="width:16px;height:16px;accent-color:var(--accent);">
+          可选（可不选此项）
         </label>
       </div>
       <div>
