@@ -817,7 +817,9 @@ def csv_response(filename, headers, rows):
     writer = csv.writer(output)
     writer.writerow(headers)
     writer.writerows(rows)
-    return Response(output.getvalue(), mimetype='text/csv; charset=utf-8-sig',
+    # Prepend UTF-8 BOM for Excel compatibility
+    content = '\uFEFF' + output.getvalue()
+    return Response(content, mimetype='text/csv; charset=utf-8',
                     headers={'Content-Disposition': f'attachment; filename={filename}'})
 
 @app.route('/api/export/products.csv')
